@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>RISK</title>
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+      }
+    </style>
+  </head>
+  <body>
+    
+    <script src="https://code.jquery.com/jquery-2.2.0.min.js"></script>
+    <canvas id="map"></canvas>
+    <script>
+      var $canvas = $('#map');
+      var canvas = $canvas.get(0);
+      var ctx = canvas.getContext('2d');
+      var mouse_position = null;
+      var countries = new Map();
+
+      var bg_gradient = ctx.createLinearGradient(0,0,1920,1080);
+      bg_gradient.addColorStop(0,"#e78778");
+      bg_gradient.addColorStop(0.1,"#f8d8c8");
+      bg_gradient.addColorStop(0.25,"#ffffff");
+      bg_gradient.addColorStop(0.9,"#f8d8a8");
+      bg_gradient.addColorStop(1,"#e8b878");
+
+      function render() {
+        ctx.save();
+        //ctx.scale(1.5,1.5);
+        ctx.clearRect(0,0,canvas.width, canvas.height);
+        // Background
+        ctx.fillStyle=bg_gradient;
+        ctx.fillRect(0,0,canvas.width,canvas.height);
+
+        ctx.translate(50,50);
+
+        // Grid
+        ctx.save();
+        ctx.beginPath();
+        for (var x = 0.5; x <= 1030; x += 20) {
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, 650);
+        }
+
+        for (var y = 0.5; y <= 650; y += 20) {
+          ctx.moveTo(0, y);
+          ctx.lineTo(1030, y);
+        }
+        ctx.strokeStyle = "#e9b988";
+        ctx.stroke();
+        ctx.restore();
+
+        // Outline
+        ctx.save();
+        ctx.beginPath();
+        ctx.lineWidth = 5;
+        ctx.setLineDash([35]);
+        ctx.rect(0,0,1030,650);
+        ctx.stroke();
+        ctx.restore();
+
+        $canvas.attr('title', '');
+        var found_mouseover = false;
+        countries.forEach(function(paths, title) {
+          var is_mouseover = false;
+          if(found_mouseover === false) {
+            paths.forEach(function(path_obj) {
+              var path = path_obj.path;
+              if(!found_mouseover && mouse_position != null && ctx.isPointInPath(path, mouse_position.x, mouse_position.y)) {
+                is_mouseover = true;
+                found_mouseover = true;
+              }
+            });
+          }
+
+          if(is_mouseover === true) {
+            $canvas.attr('title', title);
+          }
+
+          paths.forEach(function(path_obj) {
+            ctx.save();
+            var path = path_obj.path;
+            var cl = path_obj.color;
+            ctx.stroke(path);
+            if(is_mouseover) {
+              ctx.fillStyle = 'red';
+            } else {
+              ctx.fillStyle = cl;
+            }
+            ctx.fill(path);
+            ctx.clip(path);
+            ctx.strokeStyle = 'black';
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = 'black';
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 0;
+            ctx.stroke(path);
+            ctx.restore();
+          });
+        });
+        //var path_alaska = new Path2D('m 151.48214,50.737206 -0.375,-2.25 -1.375,-0.75 -1.25,-1.625 -1,-0.25 -0.125,-2.375 -0.75,-0.625 -0.5,-2.125 2.5,-1.375 3.5,-2.625 4,-0.875 3.25,-0.875 4,-2.875 2.25,-1.125001 2.625,-0.25 4,-0.5 2.375,-1.625 2.75,-0.75 2.125,-0.125 1.125,0.75 -0.375,1.5 -1.25,1.125 -0.25,1.000001 0.875,0.25 1.75,-1.000001 3.125,0.125001 4.5,-0.125001 0.375,2.875001 7.125,0.375 2.125,1.5 12.875,0.875 1.5,1.125 0.5,12 0.125,5 -2,3.375 0,24.75 2.125,0.75 5.5,0.625 3,3.875 3.125,3.875 0.25,4.25 3.5,6.375004 0.625,3.75 -2.5,6.875 -2.5,-0.5 -0.5,-1.875 -2.375,-1.125 -1.25,1.5 0,1 -1.125,0.125 -0.125,2.75 -1.375,0 -2.75,-2.5 -1.375,-3.875 3.375,-0.125 2.875,-0.25 0.125,-7 -4.875,-0.75 -2.75,-0.125 -1.75,-2.500004 -0.25,-1.875 0.75,-1.25 0.25,-0.75 -1.25,-1.25 -0.125,-1.25 -1.25,-0.25 -1,1.875 -1.75,0.25 -1.75,-0.75 -1.75,-2.25 -0.5,-2.25 -0.25,-0.875 -2.375,0 -2,1.625 -1.125,-0.25 -0.125,-4 -4.25,0 -1.5,-0.125 0,-2.25 -2.375,-2 -1.125,-0.375 -2,1.375 -0.375,1.5 1.25,0.25 0.875,1 -0.375,1 -1.375,0.375 -1.125,-0.125 -1.625,-0.125 -0.875,0.75 -1.875,0.25 -5.25,3.875 -1.375,0.5 -1.25,-1.5 -1.625,0 -0.125,-1.125 2.5,-2.25 6.75,-5.375 -1.875,-0.375 -3,0.625 0,1 -5.75,5 -3.375,2.25 -1.5,2.125 -2.5,3.125 -3.125,4 -1.125,1.625004 1.875,0.375 1.375,0.125 0.25,2.625 -3.125,2.5 -2.25,1 -1.75,-2.625 -0.75,-2 -2.625,0.625 -7.125,5 -7.25,2.875 -5.25,0.5 -2.25,-2.25 -1.125,-2.125 2.5,-1.125 8.25,-4 8.875,-4.500004 3.125,-1.5 1,-0.75 -1,-1.625 -1.375,-1.125 -1.625,1.875 -1.5,-0.25 -1.5,-1.125 -1.25,0.75 -0.5,1.875 -3,-1.125 -2.5,-0.75 -0.5,-1.375 2.125,-2.375 1.25,-2 -2,-1.875 -0.5,-2.125 -1,-1.25 -2,2.375 -2.25,0.125 -1.625,-2.25 0.375,-2.5 2.75,-1.5 0.5,-1.625 -1.5,-0.375 -1,-4.5 2.25,-1.5 1.875,-1.5 3.375,-1.875 1.125,2 2.5,-0.5 2,2.125 1.25,1.25 2.125,-1.375 0.375,-3.125 1.25,-1.75 2,-2.5 0.125,-0.75 -2.625,1.875 -1,1.5 -3.625,-0.25 -0.75,-3.125 -5,0.125 0.125,-5.75 3.625,-1 1.375,-2.875 0,-2.625 4.75,0.625 1.25,-0.125 1.25,1.75 -0.125,1.875 2.25,0.75 0.875,-1.75 2.125,0.125 2.125,-1.25 0.625,-1.25 -3.875,0 z');
+        //ctx.fill(path_alaska);
+        ctx.restore();
+      }
+
+      function adjustMapSize() {
+        $canvas.attr('width', $(document).outerWidth());
+        $canvas.attr('height', $(document).outerHeight());
+        render();
+      }
+
+      $canvas.on('mousemove', function(ev) {
+        mouse_position = {x: ev.offsetX, y: ev.offsetY};
+        render();
+      });
+
+      function init() {
+        $.ajax('map.svg').always(function(r) {
+          var $map = $(r).children('svg').first();
+          $map.children('g').each(function() {
+            var $continent = $(this);
+            if($continent.attr('id') === 'tmp') {
+              return;
+            }
+            $continent.children('g').each(function() {
+              var $country = $(this);
+              var paths = [];
+              $country.children('path').each(function() {
+                var $path = $(this);
+                var match_color = $path.attr('style').match(/stroke:(#[a-f0-9]{6})/i);
+                if(match_color == null) {
+                  console.error('Unable to get color for ', this);
+                  return;
+                }
+                paths.push({'color': match_color[1], 'path': new Path2D($path.attr('d'))});
+              });
+              countries.set($country.attr('inkscape:label'), paths);
+            });
+          })
+          /*
+          var _paths = r.getElementsByTagName('path');
+          for(var p=0;p<_paths.length;p++) {
+            var path = _paths[p];
+            var title = path.getElementsByTagName('title')[0].innerHTML;
+            countries.set(title, new Path2D(path.getAttribute('d')));
+            // attr.id
+          }
+          */
+          adjustMapSize();
+        });
+      }
+
+      $(window).on('resize', adjustMapSize);
+      $(init);
+    </script>
+  </body>
+</html>

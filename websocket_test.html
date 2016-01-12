@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>WebSocket demo</title>
+    </head>
+    <body>
+        <script>
+            var ws = new WebSocket("ws://192.168.2.31:5678/"),
+                messages = document.createElement('ul');
+            ws.onmessage = function (event) {
+                var messages = document.getElementsByTagName('ul')[0],
+                    message = document.createElement('li'),
+                    content = document.createTextNode(event.data);
+                message.appendChild(content);
+                messages.appendChild(message);
+            };
+            ws.onopen = function(event) {
+              window.setInterval(function() {
+                console.log('send...');
+                ws.send(JSON.stringify({'type':'hello','name':'Robert'}));
+              }, 1000);
+            }
+            document.body.appendChild(messages);
+        </script>
+    </body>
+</html>
