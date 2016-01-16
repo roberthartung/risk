@@ -40,13 +40,15 @@ class Session:
         await self.user.removeSession(self)
 
 class User:
-    sessions = set()
+    #sessions = set()
     def __init__(self, name, pw):
         self.name = name
         self.pw = pw
+        self.sessions = set()
 
     async def createSession(self, game, ws):
         session = Session(self, game, ws)
+        print(str(self) + " createSession")
         self.sessions.add(session)
         await game.addSession(session)
         return session
@@ -59,12 +61,17 @@ class User:
         return "<User: "+self.name+">"
 
 class Game:
-    state = GameState.lobby
-    sessions = set()
-    users = set()
-    leader = None
-    user_round_iterator = None
+    #state = GameState.lobby
+    #sessions = set()
+    #users = set()
+    #leader = None
+    #user_round_iterator = None
     def __init__(self, name):
+        self.sessions = set()
+        self.users = set()
+        self.leader = None
+        self.user_round_iterator = None
+        self.state = GameState.lobby
         self.name = name
 
     async def sendMessage(self, obj):
@@ -117,10 +124,8 @@ class Game:
         for user in self.users:
             list_of_user_names.append(user.name)
         await new_session.sendMessage({'type':'ListOfUsersMessage','users':list_of_user_names})
-
         await self.checkLeader()
-
-        await self.sendMessage({'type': 'GameInformationMessage', 'state': self.state.value, 'leader': self.leader.name, 'you': new_session.user.name})
+        await new_session.sendMessage({'type': 'GameInformationMessage', 'state': self.state.value, 'leader': self.leader.name, 'you': new_session.user.name})
 
     # ...
     async def removeSession(self, session):
@@ -164,6 +169,7 @@ class Game:
             else:
                 print("Next User: " + str(next_user))
                 for session in next_user.sessions:
+                    print("Send next move to " + str(session))
                     await session.sendMessage({'type':'NextMoveMessage'})
 
     def __str__(self):
