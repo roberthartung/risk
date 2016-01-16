@@ -4,7 +4,7 @@
 import 'dart:html' ;
 import 'dart:svg' show SvgSvgElement, GElement, PathElement;
 import 'dart:async';
-import 'dart:math' show Rectangle;
+import 'dart:math' show Rectangle, Point;
 
 import 'package:risk/communication/server.dart';
 import 'package:risk/communication/messages.dart';
@@ -45,8 +45,9 @@ class Country {
   final String id;
   final String name;
   final String color;
+  final Point middle;
   bool isMouseOver = false;
-  Country(this.id, this.name, this.color);
+  Country(this.id, this.name, this.color, this.middle);
   toString() => name;
 }
 
@@ -61,15 +62,20 @@ CanvasGradient bg_gradient;
 Point mouse_position = null;
 
 void loadCountries(GElement countriesElement) {
-  countriesElement.children.where((Element e) => e is GElement).forEach((Element continentElement) {
+  countriesElement.children.where((Element e) => e is GElement).forEach((GElement continentElement) {
     String continentName = continentElement.getAttribute('inkscape:label');
     Continent continent = new Continent(continentName);
-    continentElement.children.where((Element e) => e is GElement).forEach((Element countryElement) {
+    continentElement.children.where((Element e) => e is GElement).forEach((GElement countryElement) {
       String countryName = countryElement.getAttribute('inkscape:label');
       String countryId = countryElement.getAttribute('id');
       List<CountryPart> parts = new List();
       String color;
-      countryElement.children.where((Element e) => e is PathElement).forEach((Element pathElement) {
+      Point middle;
+      countryElement.children.where((Element e) => e is PathElement).forEach((PathElement pathElement) {
+        if(pathElement.id == countryElement.id + "-0") {
+          Rect bbox = pathElement.getBBox();
+          middle = new Point(bbox.x + bbox.width/2, bbox.y + bbox.height/2);
+        }
         Match match = regexp_stroke.firstMatch(pathElement.getAttribute('style'));
         if(match != null) {
           color = match.group(1);
@@ -77,7 +83,7 @@ void loadCountries(GElement countriesElement) {
           parts.add(new CountryPart(path));
         }
       });
-      Country country = new Country(countryId, countryName, color);
+      Country country = new Country(countryId, countryName, color, middle);
       country.parts.addAll(parts);
       world.countries[country.id] = country;
       continent.countries.add(country);
@@ -109,6 +115,8 @@ Future loadWorld(String fileName) {
     /// Create SVG object from responseText
     DocumentFragment svg = new DocumentFragment.svg(request.responseText);
     SvgSvgElement root = svg.querySelector('svg');
+    // Append to DOM so we can query position and dimension of countries
+    document.body.append(root);
     /// Get viewbox (dimension) from document
     var viewBox = root.getAttribute('viewBox').split(' ');
     Rectangle dimension = new Rectangle<double>(double.parse(viewBox[0]), double.parse(viewBox[1]), double.parse(viewBox[2]), double.parse(viewBox[3]));
@@ -200,6 +208,15 @@ void render(num) {
         ctx.stroke(part.path);
         ctx.restore();
       });
+
+      if(highlightedCountry == null || highlightedCountry == country || (connectedCountries[highlightedCountry] != null && connectedCountries[highlightedCountry].contains(country))) {
+        var dim = ctx.measureText(country.name);
+        ctx.textBaseline="middle";
+        ctx.fillStyle = 'rgba(255,255,255,0.75)';
+        ctx.fillRect(country.middle.x - dim.width/2 - 10/2, country.middle.y-16/2, dim.width+10, 16);
+        ctx.fillStyle = 'black';
+        ctx.fillText(country.name, country.middle.x - dim.width/2, country.middle.y);
+      }
     });
   });
   ctx.restore();
