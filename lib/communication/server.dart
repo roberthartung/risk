@@ -7,21 +7,39 @@ class ServerConnection {
   final StreamController<Message> _messageController = new StreamController.broadcast();
   Stream<Message> get onMessage => _messageController.stream;
 
-  final WebSocket ws;
-  ServerConnection(url) : ws = new WebSocket(url) {
-    ws.onOpen.listen((_) {
+  WebSocket _ws;
+  Timer _reconnectTimer = null;
+  bool get isConnected => _ws.readyState == WebSocket.OPEN;
+  ServerConnection(url) {
+    _open(url);
+  }
+
+  void _open(String url) {
+    _ws = new WebSocket(url);
+
+    _ws.onOpen.listen((_) {
       print('WS opened');
+      if(_reconnectTimer != null) {
+        _reconnectTimer.cancel();
+        _reconnectTimer = null;
+      }
     });
 
-    ws.onClose.listen((_) {
+    _ws.onClose.listen((_) {
       print('WS closed');
     });
 
-    ws.onError.listen((_) {
+    _ws.onError.listen((_) {
       print('WS error');
+      if(_reconnectTimer == null) {
+        _reconnectTimer = new Timer.periodic(new Duration(seconds: 5), (Timer t) {
+          print('Trying to reconnect');
+          _open(url);
+        });
+      }
     });
 
-    ws.onMessage.listen((MessageEvent ev) {
+    _ws.onMessage.listen((MessageEvent ev) {
       //print('WS Message');
       //print(ev.data);
       var obj = JSON.decode(ev.data);
@@ -53,6 +71,6 @@ class ServerConnection {
   }
 
   void send(Message m) {
-    ws.send(JSON.encode(m.toObject()));
+    _ws.send(JSON.encode(m.toObject()));
   }
 }

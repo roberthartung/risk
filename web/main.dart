@@ -2,7 +2,7 @@
 // is governed by a BSD-style license that can be found in the LICENSE file.
 
 import 'dart:html' ;
-import 'dart:svg' show SvgSvgElement, GElement, PathElement;
+import 'dart:svg' show SvgSvgElement, GElement, PathElement, Rect;
 import 'dart:async';
 import 'dart:math' show Rectangle, Point;
 
@@ -214,8 +214,6 @@ void render(num) {
         ctx.stroke(part.path);
         ctx.restore();
       });
-
-
     });
   });
 
