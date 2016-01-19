@@ -20,11 +20,18 @@ class Continent:
         self.title = title
         self.countries = []
 
+    def __str__(self):
+        return self.title
+
 class Country:
     def __init__(self, i, title):
         self.id = i
         self.title = title
+        self.user = None
         self.connected = set()
+
+    def __str__(self):
+        return self.title
 
 class MapInfo:
     def __init__(self, file_name):
@@ -34,10 +41,6 @@ class MapInfo:
         children = getChildrenWithTag(self.root.childNodes, 'g')
         self.parseCounties(getChildWithId(children, 'countries')[0])
         self.parseConnections(getChildWithId(children, 'connectors')[0])
-        for country in self.world.countries.values():
-            print(country.title)
-            for connected_country in country.connected:
-                print(" <-> " + connected_country.title)
 
     def parseCounties(self, root):
         for continentElement in getChildrenWithTag(root.childNodes, 'g'):

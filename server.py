@@ -8,9 +8,9 @@ import json
 from enum import Enum
 import gamemap
 import sys
+import copy
 
-print(gamemap.MapInfo('web/map.svg'))
-sys.exit(0)
+mapinfo = gamemap.MapInfo('web/map.svg')
 
 # TODO(rh): Uppercase members
 class GameState(Enum):
@@ -57,6 +57,7 @@ class User:
         self.name = name
         self.pw = pw
         self.sessions = set()
+        self.countries = set()
 
     async def createSession(self, game, ws):
         session = Session(self, game, ws)
@@ -86,6 +87,7 @@ class Game:
         self.state = GameState.lobby
         self.name = name
         self.preparation_phase = None
+        self.world = copy.deepcopy(mapinfo.world)
 
     async def sendMessage(self, obj):
         message = json.dumps(obj)
@@ -163,6 +165,8 @@ class Game:
         self.preparation_phase = PreparationPhase.CONQUER
         await self.changeState(GameState.preparation)
         await self.roundStep()
+        self.available_countries = copy.deepcopy(self.world.countries)
+        print(self.available_countries)
 
     async def roundStep(self):
         if (self.user_round_iterator == None):
