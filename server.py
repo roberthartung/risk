@@ -5,8 +5,14 @@ import datetime
 import random
 import websockets
 import json
-from enum import Enum;
+from enum import Enum
+import gamemap
+import sys
 
+print(gamemap.MapInfo('web/map.svg'))
+sys.exit(0)
+
+# TODO(rh): Uppercase members
 class GameState(Enum):
     # Game has not started yet, waiting for players to join
     lobby = 0
@@ -16,6 +22,12 @@ class GameState(Enum):
     started = 2
     # Game has finished and is complete
     finished = 3
+
+class PreparationPhase(Enum):
+    # Conquering the countries
+    CONQUER = 0
+    # Reinforce
+    REINFORCE = 1
 
 games = {}
 users = {}
@@ -73,6 +85,7 @@ class Game:
         self.user_round_iterator = None
         self.state = GameState.lobby
         self.name = name
+        self.preparation_phase = None
 
     async def sendMessage(self, obj):
         message = json.dumps(obj)
@@ -144,7 +157,10 @@ class Game:
         self.state = newState
         await self.sendMessage({'type': 'GameStateChangedMessage', 'state': self.state.value})
 
+    # Enter preparation state. In this state, there are two phases:
+    # - Players can conquer countries, until there are all conquered!
     async def startPreparation(self):
+        self.preparation_phase = PreparationPhase.CONQUER
         await self.changeState(GameState.preparation)
         await self.roundStep()
 
