@@ -9,6 +9,9 @@ import 'dart:math' show Rectangle, Point;
 import 'package:risk/communication/server.dart';
 import 'package:risk/communication/messages.dart';
 
+const num MAP_MARGIN = 30;
+const num MAP_PADDING = 20;
+
 final RegExp regexp_stroke = new RegExp('stroke:(#[a-f0-9]{6})');
 World world;
 ServerConnection server;
@@ -56,7 +59,7 @@ class CountryPart {
   CountryPart(this.path);
 }
 
-CanvasElement map;
+CanvasElement canvas;
 CanvasRenderingContext2D ctx;
 CanvasGradient bg_gradient;
 Point mouse_position = null;
@@ -132,25 +135,26 @@ Future loadWorld(String fileName) {
 
 void render(num) {
   ctx.save();
-  ctx.scale(scaleX, scaleY);
-  ctx.clearRect(0,0,map.width, map.height);
+
+  ctx.clearRect(0,0,canvas.width, canvas.height);
   // Background
   ctx.fillStyle=bg_gradient;
-  ctx.fillRect(0,0,map.width,map.height);
+  ctx.fillRect(0,0,canvas.width,canvas.height);
 
-  //ctx.translate(50,50);
+  ctx.translate(MAP_MARGIN+MAP_PADDING,MAP_MARGIN+MAP_PADDING);
+  ctx.scale(scaleX, scaleY);
 
   // Grid
   ctx.save();
   ctx.beginPath();
-  for (var x = 0.5; x <= 1030; x += 20) {
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, 650);
+  for (var x = 0.5-MAP_PADDING; x <= world.dimension.width+MAP_PADDING; x += 20) {
+    ctx.moveTo(x, -MAP_PADDING);
+    ctx.lineTo(x, world.dimension.height+MAP_PADDING);
   }
 
-  for (var y = 0.5; y <= 650; y += 20) {
-    ctx.moveTo(0, y);
-    ctx.lineTo(1030, y);
+  for (var y = 0.5-MAP_PADDING; y <= world.dimension.height+MAP_PADDING; y += 20) {
+    ctx.moveTo(-MAP_PADDING, y);
+    ctx.lineTo(world.dimension.width+MAP_PADDING, y);
   }
   ctx.strokeStyle = "#e9b988";
   ctx.stroke();
@@ -158,11 +162,13 @@ void render(num) {
 
   // Outline
   ctx.save();
-  ctx.beginPath();
   ctx.lineWidth = 5;
   ctx.setLineDash([35]);
-  ctx.rect(0,0,1030,650);
+  ctx.beginPath();
+  ctx.rect(-MAP_PADDING,-MAP_PADDING,world.dimension.width+2*MAP_PADDING,world.dimension.height+2*MAP_PADDING);
+  ctx.closePath();
   ctx.stroke();
+
   ctx.restore();
 
   world.connectors.forEach((Connector connector) {
@@ -174,13 +180,13 @@ void render(num) {
     ctx.restore();
   });
 
-  map.setAttribute('title', '');
+  canvas.setAttribute('title', '');
   world.continents.forEach((Continent continent) {
     continent.countries.forEach((Country country) {
       // Don't show connected countries -> regular mouseover!
       if(highlightedCountry == null) {
         if(country.isMouseOver) {
-          map.setAttribute('title', country.name);
+          canvas.setAttribute('title', country.name);
           ctx.fillStyle = 'red';
         } else {
           ctx.fillStyle = country.color;
@@ -209,43 +215,47 @@ void render(num) {
         ctx.restore();
       });
 
+
+    });
+  });
+
+  world.continents.forEach((Continent continent) {
+    continent.countries.forEach((Country country) {
       if(highlightedCountry == null || highlightedCountry == country || (connectedCountries[highlightedCountry] != null && connectedCountries[highlightedCountry].contains(country))) {
         var dim = ctx.measureText(country.name);
         ctx.textBaseline="middle";
-        ctx.fillStyle = 'rgba(255,255,255,0.75)';
+        ctx.fillStyle = 'rgba(255,255,255,0.85)';
         ctx.fillRect(country.middle.x - dim.width/2 - 10/2, country.middle.y-16/2, dim.width+10, 16);
         ctx.fillStyle = 'black';
         ctx.fillText(country.name, country.middle.x - dim.width/2, country.middle.y);
       }
     });
   });
+
   ctx.restore();
 }
 
 void setMapSize() {
-  map.width = game_container.clientWidth;
-  map.height = game_container.clientHeight;
+  canvas.width = game_container.clientWidth;
+  canvas.height = game_container.clientHeight;
 
-  double containerRatio  = map.width / map.height;
+  double canvasRatio  = canvas.width / canvas.height;
   double mapRatio = world.dimension.width / world.dimension.height;
-  // Width > Height
-  if(containerRatio > 1) {
-    // Width > Height
-    if(mapRatio > 1) {
-      scaleX = map.width / world.dimension.width;
-      scaleY = scaleX;
-      // scaleY =
-    }
-  } else {
 
+  if(canvasRatio > mapRatio) {
+    scaleX = (canvas.height - 2*MAP_MARGIN - 2*MAP_PADDING) / world.dimension.height;
+    scaleY = scaleX;
+  } else {
+    scaleX = (canvas.width - 2*MAP_MARGIN - 2*MAP_PADDING) / world.dimension.width;
+    scaleY = scaleX;
   }
 
   window.animationFrame.then(render);
 }
 
 void main() {
-  map = querySelector('#map');
-  ctx = map.getContext('2d');
+  canvas = querySelector('#map');
+  ctx = canvas.getContext('2d');
   game_container = querySelector('#game');
 
   bg_gradient = ctx.createLinearGradient(0,0,1920,1080);
@@ -263,8 +273,9 @@ void main() {
     setMapSize();
   });
 
-  map.onMouseMove.listen((MouseEvent ev) {
+  canvas.onMouseMove.listen((MouseEvent ev) {
     ctx.save();
+    ctx.translate(MAP_MARGIN+MAP_PADDING,MAP_MARGIN+MAP_PADDING);
     ctx.scale(scaleX, scaleY);
     mouse_position = ev.offset;
     world.countries.forEach((String id, Country country) {
@@ -298,7 +309,7 @@ void main() {
     ctx.restore();
   });
 
-  map.onClick.listen((MouseEvent ev) {
+  canvas.onClick.listen((MouseEvent ev) {
     if(hoveredCountry != null) {
       highlightedCountry = hoveredCountry;
     } else {
