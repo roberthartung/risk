@@ -17,6 +17,10 @@ html, body {
     overflow: hidden;
 }
 
+#game canvas {
+    position: absolute;
+}
+
 #sidebar {
     position: absolute;
     top: 0;
@@ -34,6 +38,37 @@ html, body {
 button[hidden] {
     display: none;
 }
+
+.user-color {
+    width: 20px;
+}
+
+.user-color span {
+    display: inline-block;
+    width: 15px;
+    height: 15px;
+}
+
+#users-list:nth-child(1) .user-color span {
+    background-color: red;
+}
+
+#users-list:nth-child(2) .user-color span {
+    background-color: chartreuse;
+}
+
+#users-list:nth-child(3) .user-color span {
+    background-color: blue;
+}
+
+#users-list:nth-child(4) .user-color span {
+    background-color: gold;
+}
+
+#users-list:nth-child(5) .user-color span {
+    background-color: orange;
+}
+
 /*
 input, button {
     padding: 3px;

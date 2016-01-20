@@ -59,8 +59,10 @@ class CountryPart {
   CountryPart(this.path);
 }
 
-CanvasElement canvas;
-CanvasRenderingContext2D ctx;
+CanvasElement canvas_background;
+CanvasRenderingContext2D ctx_background;
+CanvasElement canvas_highlight;
+CanvasRenderingContext2D ctx_highlight;
 CanvasGradient bg_gradient;
 Point mouse_position = null;
 
@@ -129,64 +131,65 @@ Future loadWorld(String fileName) {
     loadConnectors(root.querySelector('#connectors'));
     /// Pre-calculate the connected countries (Map country -> list of countries)
     calculateConnectedCountries();
+    root.remove();
     return true;
   });
 }
 
-void render(num) {
-  ctx.save();
-
-  ctx.clearRect(0,0,canvas.width, canvas.height);
+void renderBase() {
   // Background
-  ctx.fillStyle=bg_gradient;
-  ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx_background.fillStyle=bg_gradient;
+  ctx_background.fillRect(0,0,canvas_background.width,canvas_background.height);
 
-  ctx.translate(MAP_MARGIN+MAP_PADDING,MAP_MARGIN+MAP_PADDING);
-  ctx.scale(scaleX, scaleY);
+  ctx_background.translate(MAP_MARGIN+MAP_PADDING,MAP_MARGIN+MAP_PADDING);
+  ctx_background.scale(scaleX, scaleY);
 
   // Grid
-  ctx.save();
-  ctx.beginPath();
+  ctx_background.save();
+  ctx_background.beginPath();
   for (var x = 0.5-MAP_PADDING; x <= world.dimension.width+MAP_PADDING; x += 20) {
-    ctx.moveTo(x, -MAP_PADDING);
-    ctx.lineTo(x, world.dimension.height+MAP_PADDING);
+    ctx_background.moveTo(x, -MAP_PADDING);
+    ctx_background.lineTo(x, world.dimension.height+MAP_PADDING);
   }
-
   for (var y = 0.5-MAP_PADDING; y <= world.dimension.height+MAP_PADDING; y += 20) {
-    ctx.moveTo(-MAP_PADDING, y);
-    ctx.lineTo(world.dimension.width+MAP_PADDING, y);
+    ctx_background.moveTo(-MAP_PADDING, y);
+    ctx_background.lineTo(world.dimension.width+MAP_PADDING, y);
   }
-  ctx.strokeStyle = "#e9b988";
-  ctx.stroke();
-  ctx.restore();
+  ctx_background.strokeStyle = "#e9b988";
+  ctx_background.stroke();
+  ctx_background.restore();
 
   // Outline
-  ctx.save();
-  ctx.lineWidth = 5;
-  ctx.setLineDash([35]);
-  ctx.beginPath();
-  ctx.rect(-MAP_PADDING,-MAP_PADDING,world.dimension.width+2*MAP_PADDING,world.dimension.height+2*MAP_PADDING);
-  ctx.closePath();
-  ctx.stroke();
+  ctx_background.save();
+  ctx_background.lineWidth = 5;
+  ctx_background.setLineDash([35]);
+  ctx_background.beginPath();
+  ctx_background.rect(-MAP_PADDING,-MAP_PADDING,world.dimension.width+2*MAP_PADDING,world.dimension.height+2*MAP_PADDING);
+  ctx_background.closePath();
+  ctx_background.stroke();
+  ctx_background.restore();
+}
 
-  ctx.restore();
-
+void renderConnectors() {
   world.connectors.forEach((Connector connector) {
-    ctx.save();
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = 'black';
-    ctx.setLineDash([4,2]);
-    ctx.stroke(connector.path);
-    ctx.restore();
+    ctx_background.save();
+    ctx_background.lineWidth = 2;
+    ctx_background.strokeStyle = 'black';
+    ctx_background.setLineDash([4,2]);
+    ctx_background.stroke(connector.path);
+    ctx_background.restore();
   });
+}
 
-  canvas.setAttribute('title', '');
+void renderCountries() {
+  //canvas_highlight.setAttribute('title', '');
   world.continents.forEach((Continent continent) {
     continent.countries.forEach((Country country) {
       // Don't show connected countries -> regular mouseover!
+      /*
       if(highlightedCountry == null) {
         if(country.isMouseOver) {
-          canvas.setAttribute('title', country.name);
+          //canvas_highlight.setAttribute('title', country.name);
           ctx.fillStyle = 'red';
         } else {
           ctx.fillStyle = country.color;
@@ -200,68 +203,145 @@ void render(num) {
           ctx.fillStyle = 'gray';
         }
       }
+      */
+      ctx_background.fillStyle = country.color;
 
       country.parts.forEach((CountryPart part) {
-        ctx.save();
-        ctx.stroke(part.path);
-        ctx.fill(part.path);
-        ctx.clip(part.path);
-        ctx.strokeStyle = 'black';
-        ctx.shadowBlur = 20;
-        ctx.shadowColor = 'black';
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 0;
-        ctx.stroke(part.path);
-        ctx.restore();
+        ctx_background.save();
+        ctx_background.stroke(part.path);
+        ctx_background.fill(part.path);
+        ctx_background.clip(part.path);
+        ctx_background.strokeStyle = 'black';
+        ctx_background.shadowBlur = 20;
+        ctx_background.shadowColor = 'black';
+        ctx_background.shadowOffsetX = 0;
+        ctx_background.shadowOffsetY = 0;
+        ctx_background.stroke(part.path);
+        ctx_background.restore();
       });
     });
   });
+}
 
+void renderLabels() {
   world.continents.forEach((Continent continent) {
     continent.countries.forEach((Country country) {
       if(highlightedCountry == null || highlightedCountry == country || (connectedCountries[highlightedCountry] != null && connectedCountries[highlightedCountry].contains(country))) {
-        var dim = ctx.measureText(country.name);
-        ctx.textBaseline="middle";
-        ctx.fillStyle = 'rgba(255,255,255,0.85)';
-        ctx.fillRect(country.middle.x - dim.width/2 - 10/2, country.middle.y-16/2, dim.width+10, 16);
-        ctx.fillStyle = 'black';
-        ctx.fillText(country.name, country.middle.x - dim.width/2, country.middle.y);
+        var dim = ctx_highlight.measureText(country.name);
+        ctx_highlight.textBaseline="middle";
+        ctx_highlight.fillStyle = 'rgba(255,255,255,0.85)';
+        ctx_highlight.fillRect(country.middle.x - dim.width/2 - 10/2, country.middle.y-16/2, dim.width+10, 16);
+        ctx_highlight.fillStyle = 'black';
+        ctx_highlight.fillText(country.name, country.middle.x - dim.width/2, country.middle.y);
       }
     });
   });
-
-  ctx.restore();
 }
 
-void setMapSize() {
-  canvas.width = game_container.clientWidth;
-  canvas.height = game_container.clientHeight;
+void renderHighlightedCountries() {
+  world.continents.forEach((Continent continent) {
+    continent.countries.forEach((Country country) {
+      // Don't show connected countries -> regular mouseover!
+      bool needsRender = false;
 
-  double canvasRatio  = canvas.width / canvas.height;
-  double mapRatio = world.dimension.width / world.dimension.height;
+      if(highlightedCountry == null) {
+        if(country.isMouseOver) {
+          ctx_highlight.fillStyle = 'red';
+          needsRender = true;
+        } /*else {
+          ctx_highlight.fillStyle = country.color;
+        }*/
+      } else {
+        if(highlightedCountry == country) {
+          ctx_highlight.fillStyle = 'red';
+          needsRender = true;
+        } else if(connectedCountries[highlightedCountry] != null && connectedCountries[highlightedCountry].contains(country)) {
+          ctx_highlight.fillStyle = country.color;
+          needsRender = true;
+        } else {
+          ctx_highlight.fillStyle = 'gray';
+          needsRender = true;
+        }
+      }
 
-  if(canvasRatio > mapRatio) {
-    scaleX = (canvas.height - 2*MAP_MARGIN - 2*MAP_PADDING) / world.dimension.height;
-    scaleY = scaleX;
-  } else {
-    scaleX = (canvas.width - 2*MAP_MARGIN - 2*MAP_PADDING) / world.dimension.width;
-    scaleY = scaleX;
-  }
-
-  window.animationFrame.then(render);
+      //ctx_background.fillStyle = country.color;
+      if(needsRender) {
+        country.parts.forEach((CountryPart part) {
+          ctx_highlight.save();
+          ctx_highlight.stroke(part.path);
+          ctx_highlight.fill(part.path);
+          ctx_highlight.clip(part.path);
+          ctx_highlight.strokeStyle = 'black';
+          ctx_highlight.shadowBlur = 20;
+          ctx_highlight.shadowColor = 'black';
+          ctx_highlight.shadowOffsetX = 0;
+          ctx_highlight.shadowOffsetY = 0;
+          ctx_highlight.stroke(part.path);
+          ctx_highlight.restore();
+        });
+      }
+    });
+  });
 }
 
-void main() {
-  canvas = querySelector('#map');
-  ctx = canvas.getContext('2d');
-  game_container = querySelector('#game');
+void render(num) {
+  ctx_highlight.save();
 
-  bg_gradient = ctx.createLinearGradient(0,0,1920,1080);
+  ctx_highlight.clearRect(0,0,canvas_highlight.width, canvas_highlight.height);
+  ctx_highlight.translate(MAP_MARGIN+MAP_PADDING,MAP_MARGIN+MAP_PADDING);
+  ctx_highlight.scale(scaleX, scaleY);
+  renderHighlightedCountries();
+  renderLabels();
+
+  ctx_highlight.restore();
+}
+
+void renderBackground(num) {
+  ctx_background.save();
+
+  ctx_background.clearRect(0,0,canvas_background.width, canvas_background.height);
+
+  bg_gradient = ctx_background.createLinearGradient(0,0,canvas_background.width,canvas_background.height);
   bg_gradient.addColorStop(0,"#e78778");
   bg_gradient.addColorStop(0.1,"#f8d8c8");
   bg_gradient.addColorStop(0.25,"#ffffff");
   bg_gradient.addColorStop(0.9,"#f8d8a8");
   bg_gradient.addColorStop(1,"#e8b878");
+
+  renderBase();
+  renderConnectors();
+  renderCountries();
+
+  ctx_background.restore();
+}
+
+void setMapSize() {
+  canvas_background.width = game_container.clientWidth;
+  canvas_background.height = game_container.clientHeight;
+  canvas_highlight.width = game_container.clientWidth;
+  canvas_highlight.height = game_container.clientHeight;
+
+  double canvasRatio  = canvas_background.width / canvas_background.height;
+  double mapRatio = world.dimension.width / world.dimension.height;
+
+  if(canvasRatio > mapRatio) {
+    scaleX = (canvas_background.height - 2*MAP_MARGIN - 2*MAP_PADDING) / world.dimension.height;
+    scaleY = scaleX;
+  } else {
+    scaleX = (canvas_background.width - 2*MAP_MARGIN - 2*MAP_PADDING) / world.dimension.width;
+    scaleY = scaleX;
+  }
+
+  window.animationFrame.then(renderBackground);
+  window.animationFrame.then(render);
+}
+
+void main() {
+  canvas_background = querySelector('#canvas-background');
+  ctx_background = canvas_background.getContext('2d');
+  canvas_highlight = querySelector('#canvas-highlight');
+  ctx_highlight = canvas_highlight.getContext('2d');
+  game_container = querySelector('#game');
 
   loadWorld('map.svg').then((_) {
     setMapSize();
@@ -271,15 +351,15 @@ void main() {
     setMapSize();
   });
 
-  canvas.onMouseMove.listen((MouseEvent ev) {
-    ctx.save();
-    ctx.translate(MAP_MARGIN+MAP_PADDING,MAP_MARGIN+MAP_PADDING);
-    ctx.scale(scaleX, scaleY);
+  canvas_highlight.onMouseMove.listen((MouseEvent ev) {
+    ctx_highlight.save();
+    ctx_highlight.translate(MAP_MARGIN+MAP_PADDING,MAP_MARGIN+MAP_PADDING);
+    ctx_highlight.scale(scaleX, scaleY);
     mouse_position = ev.offset;
     world.countries.forEach((String id, Country country) {
       bool isMouseOver = false;
       country.parts.forEach((CountryPart part) {
-        if(ctx.isPointInPath(part.path, ev.offset.x, ev.offset.y)) {
+        if(ctx_highlight.isPointInPath(part.path, ev.offset.x, ev.offset.y)) {
           isMouseOver = true;
         }
       });
@@ -304,10 +384,10 @@ void main() {
         }
       }
     });
-    ctx.restore();
+    ctx_highlight.restore();
   });
 
-  canvas.onClick.listen((MouseEvent ev) {
+  canvas_highlight.onClick.listen((MouseEvent ev) {
     if(hoveredCountry != null) {
       highlightedCountry = hoveredCountry;
     } else {
@@ -320,7 +400,8 @@ void main() {
 
   final NodeValidator userListNodeValidator = new NodeValidatorBuilder()
     ..allowElement('tr', attributes: ['data-user-name'])
-    ..allowElement('td')
+    ..allowElement('td', attributes: ['class'])
+    ..allowElement('span')
     ..allowTextElements();
 
   ButtonElement startButton = querySelector('#btn-start');
@@ -332,9 +413,11 @@ void main() {
     if(m is UserJoinedMessage) {
       print('User joined ${m.user}');
       users_list_element.appendHtml("""<tr data-user-name="${m.user}">
+          <td class="user-color"><span></span></td>
           <td>${m.user}</td>
-          <td>&nbsp;</td>
-          <td>&nbsp;</td>
+          <td>0</td>
+          <td>0</td>
+          <td>0</td>
       </tr>""", validator: userListNodeValidator);
     } else if(m is UserQuitMessage) {
       print('User quit ${m.user}');
@@ -344,9 +427,11 @@ void main() {
     } else if(m is ListOfUsersMessage) {
       m.users.forEach((String name) {
         users_list_element.appendHtml("""<tr data-user-name="${name}">
+          <td class="user-color"><span></span></td>
           <td>${name}</td>
-          <td>&nbsp;</td>
-          <td>&nbsp;</td>
+          <td>0</td>
+          <td>0</td>
+          <td>0</td>
       </tr>""", validator: userListNodeValidator);
       });
       //print('List of users: ${m.users}');
