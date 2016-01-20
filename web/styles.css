@@ -49,23 +49,23 @@ button[hidden] {
     height: 15px;
 }
 
-#users-list:nth-child(1) .user-color span {
+#users-list tr:nth-child(1) .user-color span {
     background-color: red;
 }
 
-#users-list:nth-child(2) .user-color span {
+#users-list tr:nth-child(2) .user-color span {
     background-color: chartreuse;
 }
 
-#users-list:nth-child(3) .user-color span {
+#users-list tr:nth-child(3) .user-color span {
     background-color: blue;
 }
 
-#users-list:nth-child(4) .user-color span {
+#users-list tr:nth-child(4) .user-color span {
     background-color: gold;
 }
 
-#users-list:nth-child(5) .user-color span {
+#users-list tr:nth-child(5) .user-color span {
     background-color: orange;
 }
 

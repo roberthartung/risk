@@ -92,3 +92,16 @@ class UserJoinedMessage extends UserMessage {
 class UserQuitMessage extends UserMessage {
   UserQuitMessage.fromObject(obj) : super.fromObject(obj);
 }
+
+class UserOfflineMessage extends UserMessage {
+  UserOfflineMessage.fromObject(obj) : super.fromObject(obj);
+}
+
+class UserOnlineMessage extends UserMessage {
+  UserOnlineMessage.fromObject(obj) : super.fromObject(obj);
+}
+
+class LeaderChangedMessage extends Message {
+  final String leader;
+  LeaderChangedMessage.fromObject(obj) : super.fromObject(obj), this.leader = obj['leader'];
+}

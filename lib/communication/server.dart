@@ -40,8 +40,6 @@ class ServerConnection {
     });
 
     _ws.onMessage.listen((MessageEvent ev) {
-      //print('WS Message');
-      //print(ev.data);
       var obj = JSON.decode(ev.data);
       switch(obj['type']) {
         case 'UserJoinedMessage' :
@@ -65,9 +63,17 @@ class ServerConnection {
         case 'ReinforceMoveMessage':
           _messageController.add(new ReinforceMoveMessage.fromObject(obj));
           break;
+        case 'LeaderChangedMessage' :
+          _messageController.add(new LeaderChangedMessage.fromObject(obj));
+          break;
+        case 'UserOnlineMessage' :
+          _messageController.add(new UserOnlineMessage.fromObject(obj));
+          break;
+        case 'UserOfflineMessage' :
+          _messageController.add(new UserOfflineMessage.fromObject(obj));
+          break;
         default :
           _messageController.addError(obj);
-          //print('Unknown message: $obj');
           break;
       }
     });
