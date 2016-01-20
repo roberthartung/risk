@@ -72,6 +72,9 @@ class ServerConnection {
         case 'UserOfflineMessage' :
           _messageController.add(new UserOfflineMessage.fromObject(obj));
           break;
+        case 'CountryConqueredMessage' :
+          _messageController.add(new CountryConqueredMessage.fromObject(obj));
+          break;
         default :
           _messageController.addError(obj);
           break;

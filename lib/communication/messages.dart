@@ -1,3 +1,6 @@
+import 'package:risk/world/world.dart';
+import 'package:risk/user.dart';
+
 enum GameState {
   lobby,
   preparation,
@@ -104,4 +107,26 @@ class UserOnlineMessage extends UserMessage {
 class LeaderChangedMessage extends Message {
   final String leader;
   LeaderChangedMessage.fromObject(obj) : super.fromObject(obj), this.leader = obj['leader'];
+}
+
+class CountryMessage extends Message {
+  final Country country;
+  CountryMessage(this.country) : super();
+
+  CountryMessage.fromObject(obj) : super.fromObject(obj), country = new Country(obj['country']);
+
+  Map toObject() {
+    Map obj = super.toObject();
+    obj['country'] = country.id;
+    return obj;
+  }
+}
+
+class ConquerMoveFinishedMessage extends CountryMessage {
+  ConquerMoveFinishedMessage(country) : super(country);
+}
+
+class CountryConqueredMessage extends CountryMessage {
+  final User user;
+  CountryConqueredMessage.fromObject(obj) : super.fromObject(obj), this.user = new User(obj['user']);
 }

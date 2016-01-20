@@ -2,58 +2,19 @@
 // is governed by a BSD-style license that can be found in the LICENSE file.
 
 import 'dart:html' ;
-import 'dart:svg' show SvgSvgElement, GElement, PathElement, Rect;
 import 'dart:async';
 import 'dart:math' show Rectangle, Point;
 
 import 'package:risk/communication/server.dart';
 import 'package:risk/communication/messages.dart';
+import 'package:risk/world/world.dart';
+import 'package:risk/user.dart';
 
 const num MAP_MARGIN = 30;
 const num MAP_PADDING = 20;
 
-final RegExp regexp_stroke = new RegExp('stroke:(#[a-f0-9]{6})');
-Map<Country,List<Country>> connectedCountries = new Map();
-
 enum MoveType {
   CONQUER
-}
-
-class World {
-  final List<Continent> continents = new List();
-  final List<Connector> connectors = new List();
-  final Map<String, Country> countries = new Map();
-  final Rectangle dimension;
-  World(this.dimension);
-}
-
-class Connector {
-  final Country start;
-  final Country end;
-  final Path2D path;
-  Connector(this.start, this.end, this.path);
-}
-
-class Continent {
-  final List<Country> countries = new List();
-  final String name;
-  Continent(this.name);
-}
-
-class Country {
-  final List<CountryPart> parts = new List();
-  final String id;
-  final String name;
-  final String color;
-  final Point middle;
-  bool isMouseOver = false;
-  Country(this.id, this.name, this.color, this.middle);
-  toString() => name;
-}
-
-class CountryPart {
-  final Path2D path;
-  CountryPart(this.path);
 }
 
 class GameRenderer {
@@ -128,6 +89,7 @@ class GameRenderer {
       ctx_bg.moveTo(x, -MAP_PADDING);
       ctx_bg.lineTo(x, game.world.dimension.height+MAP_PADDING);
     }
+
     for (var y = 0.5-MAP_PADDING; y <= game.world.dimension.height+MAP_PADDING; y += 20) {
       ctx_bg.moveTo(-MAP_PADDING, y);
       ctx_bg.lineTo(game.world.dimension.width+MAP_PADDING, y);
@@ -185,7 +147,7 @@ class GameRenderer {
   void renderLabels() {
     game.world.continents.forEach((Continent continent) {
       continent.countries.forEach((Country country) {
-        if(selectedCountry == null || selectedCountry == country || (connectedCountries[selectedCountry] != null && connectedCountries[selectedCountry].contains(country))) {
+        if(selectedCountry == null || selectedCountry == country || (game.world.connectedCountries[selectedCountry] != null && game.world.connectedCountries[selectedCountry].contains(country))) {
           var dim = ctx_hl.measureText(country.name);
           ctx_hl.textBaseline="middle";
           ctx_hl.fillStyle = 'rgba(255,255,255,0.85)';
@@ -212,7 +174,7 @@ class GameRenderer {
           if(selectedCountry == country) {
             ctx_hl.fillStyle = 'red';
             needsRender = true;
-          } else if(connectedCountries[selectedCountry] != null && connectedCountries[selectedCountry].contains(country)) {
+          } else if(game.world.connectedCountries[selectedCountry] != null && game.world.connectedCountries[selectedCountry].contains(country)) {
             ctx_hl.fillStyle = country.color;
             needsRender = true;
           } else {
@@ -241,13 +203,56 @@ class GameRenderer {
     });
   }
 
+  void renderConqueredCountries() {
+    game.world.continents.forEach((Continent continent) {
+      continent.countries.forEach((Country country) {
+        // Don't show connected countries -> regular mouseover!
+        bool needsRender = false;
+
+        if(selectedCountry == country) {
+          ctx_hl.fillStyle = 'red';
+          needsRender = true;
+        } else if(country.user == game.localUser) {
+          ctx_hl.fillStyle = 'green';
+          needsRender = true;
+        } else if(country.user != null) {
+          ctx_hl.fillStyle = country.color;
+          needsRender = true;
+        } else {
+          ctx_hl.fillStyle = 'gray';
+          needsRender = true;
+        }
+
+        if(needsRender) {
+          country.parts.forEach((CountryPart part) {
+            ctx_hl.save();
+            ctx_hl.stroke(part.path);
+            ctx_hl.fill(part.path);
+            ctx_hl.clip(part.path);
+            ctx_hl.strokeStyle = 'black';
+            ctx_hl.shadowBlur = 20;
+            ctx_hl.shadowColor = 'black';
+            ctx_hl.shadowOffsetX = 0;
+            ctx_hl.shadowOffsetY = 0;
+            ctx_hl.stroke(part.path);
+            ctx_hl.restore();
+          });
+        }
+      });
+    });
+  }
+
   void render(num) {
     ctx_hl.save();
 
     ctx_hl.clearRect(0,0,canvas_hl.width, canvas_hl.height);
     ctx_hl.translate(MAP_MARGIN+MAP_PADDING,MAP_MARGIN+MAP_PADDING);
     ctx_hl.scale(scaleX, scaleY);
-    renderHighlightedCountries();
+    if(game.state == GameState.preparation) {
+      renderConqueredCountries();
+    } else {
+      renderHighlightedCountries();
+    }
     renderLabels();
 
     ctx_hl.restore();
@@ -312,7 +317,7 @@ class MouseInputDevice extends InputDevice {
         checkCountry(hoveredCountry);
       }
 
-      game.world.countries.forEach((String id, Country country) {
+      Country.countries.forEach((String id, Country country) {
         checkCountry(country);
       });
       game.renderer.ctx_hl.restore();
@@ -361,26 +366,6 @@ class MouseInputDevice extends InputDevice {
   }
 }
 
-class User {
-  final String name;
-
-  static Map<String, User> _users = new Map<String, User>();
-
-  factory User(name) {
-    if (_users.containsKey(name)) {
-      return _users[name];
-    } else {
-      final user = new User._(name);
-      _users[name] = user;
-      return user;
-    }
-  }
-
-  User._(this.name);
-
-  String toString() => name;
-}
-
 class Game {
   final StreamController<User> _userJoinedController = new StreamController.broadcast();
   Stream<User> get onUserJoin => _userJoinedController.stream;
@@ -400,29 +385,32 @@ class Game {
   GameRenderer _renderer;
   GameRenderer get renderer => _renderer;
   World world;
-  //World get world => _world;
   InputDevice _inputDevice;
+  InputDevice get inputDevice => _inputDevice;
   ServerConnection _server;
   ServerConnection get server => _server;
   User localUser;
   GameState state;
 
   Game(canvas_bg, canvas_hl, container) {
-    print('Game()');
-    loadWorld('map.svg').then((_) {
-      renderer.updateSize();
-    });
+    loadWorld('map.svg').then((World world) => _worldLoaded(world, canvas_bg, canvas_hl, container));
+  }
+
+  void _worldLoaded(World world, canvas_bg, canvas_hl, container) {
+    this.world = world;
+
     _renderer = new GameRenderer(canvas_bg, canvas_hl, container, this);
     _inputDevice = new MouseInputDevice(this);
     setupServer();
 
     _inputDevice.onCountrySelected.listen((Country country) {
-      //print('Country selected: $country');
+      if(state == GameState.preparation) {
+        /// ....
+      }
       renderer.setSelectedCountry(country);
     });
 
     _inputDevice.onCountryDeselected.listen((Country country) {
-      //print('Country deselected: $country');
       renderer.setSelectedCountry(null);
     });
 
@@ -435,6 +423,8 @@ class Game {
       //print('Country out: $country');
       renderer.requestRender();
     });
+
+    renderer.updateSize();
   }
 
   void setupServer() {
@@ -442,141 +432,30 @@ class Game {
     _server = new ServerConnection("ws://${window.location.hostname}:5678");
     _server.onMessage.listen((Message m) {
       if(m is UserJoinedMessage) {
-        /// TODO(rh): Use User factory here!!
         _userJoinedController.add(new User(m.user));
-        /*
-        print('User joined ${m.user}');
-        users_list_element.appendHtml("""<tr data-user-name="${m.user}">
-          <td class="user-color"><span></span></td>
-          <td>${m.user}</td>
-          <td>0</td>
-          <td>0</td>
-          <td>0</td>
-      </tr>""", validator: userListNodeValidator);
-      */
       } else if(m is UserQuitMessage) {
         _userLeftController.add(new User(m.user));
-        /*
-        print('User quit ${m.user}');
-        Element e = querySelector('#users-list tr[data-user-name="${m.user}"]');
-        if(e != null)
-          e.remove();
-        */
       } else if(m is ListOfUsersMessage) {
         m.users.forEach((String name) {
           _userJoinedController.add(new User(name));
-          /*
-          users_list_element.appendHtml("""<tr data-user-name="${name}">
-          <td class="user-color"><span></span></td>
-          <td>${name}</td>
-          <td>0</td>
-          <td>0</td>
-          <td>0</td>
-      </tr>""", validator: userListNodeValidator);
-      */
         });
         //print('List of users: ${m.users}');
       } else if(m is GameInformationMessage) {
         localUser = new User(m.me);
         _leaderChangedController.add(new User(m.leader));
-        // me = m.me;
-        // print("GameInfo - Leader: ${m.leader} - State: ${m.state} Me: ${m.me}");
-        /*
-        if (m.leader == m.me) {
-          print('Local player is leader!');
-          startButton.attributes.remove('hidden');
-        }
-        */
       } else if(m is GameStateChangedMessage) {
-        // print('Game state changed: ${m.state}');
+        state = m.state;
         _gameStateChangedController.add(m.state);
       } else if(m is NextMoveMessage) {
-        //finishMoveButton.attributes.remove('disabled');
-        /*
         if(m is ConquerMoveMessage) {
-          print('Conquer move -> Let user select a free country!');
+          _nextMoveController.add(MoveType.CONQUER);
         }
-        */
+      } else if(m is CountryConqueredMessage) {
+        m.country.user = m.user;
+        game.renderer.requestRender();
       }
     });
   }
-}
-
-/*
-CanvasElement canvas_background;
-CanvasRenderingContext2D ctx_background;
-CanvasElement canvas_highlight;
-CanvasRenderingContext2D ctx_highlight;
-*/
-
-void loadCountries(GElement countriesElement) {
-  countriesElement.children.where((Element e) => e is GElement).forEach((GElement continentElement) {
-    String continentName = continentElement.getAttribute('inkscape:label');
-    Continent continent = new Continent(continentName);
-    continentElement.children.where((Element e) => e is GElement).forEach((GElement countryElement) {
-      String countryName = countryElement.getAttribute('inkscape:label');
-      String countryId = countryElement.getAttribute('id');
-      List<CountryPart> parts = new List();
-      String color;
-      Point middle;
-      countryElement.children.where((Element e) => e is PathElement).forEach((PathElement pathElement) {
-        if(pathElement.id == countryElement.id + "-0") {
-          Rect bbox = pathElement.getBBox();
-          middle = new Point(bbox.x + bbox.width/2, bbox.y + bbox.height/2);
-        }
-        Match match = regexp_stroke.firstMatch(pathElement.getAttribute('style'));
-        if(match != null) {
-          color = match.group(1);
-          Path2D path = new Path2D(pathElement.getAttribute('d'));
-          parts.add(new CountryPart(path));
-        }
-      });
-      Country country = new Country(countryId, countryName, color, middle);
-      country.parts.addAll(parts);
-      game.world.countries[country.id] = country;
-      continent.countries.add(country);
-    });
-
-    game.world.continents.add(continent);
-  });
-}
-
-void loadConnectors(GElement connectorsElement) {
-  connectorsElement.children.where((Element e) => e is GElement).forEach((Element connectorLayerElement) {
-    Element connectorElement = connectorLayerElement.children.where((Element e) => e is PathElement).first;
-    String start = connectorElement.getAttribute('inkscape:connection-start').split('-').first.substring(1);
-    String end = connectorElement.getAttribute('inkscape:connection-end').split('-').first.substring(1);
-    game.world.connectors.add(new Connector(game.world.countries[start], game.world.countries[end], new Path2D(connectorElement.getAttribute('d'))));
-  });
-}
-
-void calculateConnectedCountries() {
-  connectedCountries.clear();
-  game.world.connectors.forEach((Connector connector) {
-    connectedCountries.putIfAbsent(connector.start, () => new List()).add(connector.end);
-    connectedCountries.putIfAbsent(connector.end, () => new List()).add(connector.start);
-  });
-}
-
-Future loadWorld(String fileName) {
-  return HttpRequest.request(fileName).then((HttpRequest request) {
-    /// Create SVG object from responseText
-    DocumentFragment svg = new DocumentFragment.svg(request.responseText);
-    SvgSvgElement root = svg.querySelector('svg');
-    // Append to DOM so we can query position and dimension of countries
-    document.body.append(root);
-    /// Get viewbox (dimension) from document
-    var viewBox = root.getAttribute('viewBox').split(' ');
-    Rectangle dimension = new Rectangle<double>(double.parse(viewBox[0]), double.parse(viewBox[1]), double.parse(viewBox[2]), double.parse(viewBox[3]));
-    /// Create world, countries, ...
-    game.world = new World(dimension);
-    loadCountries(root.querySelector('#countries'));
-    loadConnectors(root.querySelector('#connectors'));
-    /// Pre-calculate the connected countries (Map country -> list of countries)
-    calculateConnectedCountries();
-    root.remove();
-    return true;
-  });
 }
 
 Game game;
@@ -620,6 +499,27 @@ void main() {
   });
 
   game.onNextMove.listen((MoveType move) {
+    if(move == MoveType.CONQUER) {
+      Country countryToConquer;
+      StreamSubscription waitForSelection;
+      StreamSubscription waitForDeselection;
+      waitForSelection = game.inputDevice.onCountrySelected.listen((Country country) {
+        if(country.user == null) {
+          countryToConquer = country;
+          finishMoveButton.attributes.remove('disabled');
+        }
+      });
+
+      waitForDeselection = game.inputDevice.onCountryDeselected.listen((Country country) {
+        finishMoveButton.attributes['disabled'] = 'disabled';
+      });
+
+      finishMoveButton.onClick.first.then((_) {
+        waitForSelection.cancel();
+        waitForDeselection.cancel();
+        game.server.send(new ConquerMoveFinishedMessage(countryToConquer));
+      });
+    }
     print('Next Move: $move');
   });
 
@@ -630,7 +530,6 @@ void main() {
 
   finishMoveButton.onClick.listen((MouseEvent ev) {
     print('Move finished');
-    game.server.send(new MoveFinishedMessage());
     finishMoveButton.attributes['disabled'] = 'disabled';
   });
 

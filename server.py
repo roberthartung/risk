@@ -145,7 +145,7 @@ class Game:
     # ...
     async def removeSession(self, session):
         self.sessions.remove(session)
-        await self.sendMessage({'type':'UserOfflineMessage','user':session.user.name})
+        await self.sendMessage({'type':'UserOfflineMessage', 'user':session.user.name})
         # try to remove user (only when in game lobby)
         await self.removeUser(session.user)
 
@@ -165,8 +165,9 @@ class Game:
         self.preparation_phase = PreparationPhase.CONQUER
         await self.changeState(GameState.preparation)
         await self.roundStep()
-        self.available_countries = copy.deepcopy(self.world.countries)
-        print(self.available_countries)
+        # copy only list, but not references!
+        self.available_countries = copy.copy(self.world.countries)
+        # print(self.available_countries)
 
     async def roundStep(self):
         if (self.user_round_iterator == None):
@@ -188,6 +189,16 @@ class Game:
 
             for session in next_user.sessions:
                 await session.sendMessage(message)
+
+    async def conquerCountry(self, session, country_id):
+        if country_id in self.available_countries:
+            print("Country is available for conquering!")
+            del self.available_countries[country_id]
+            await self.sendMessage({'type':'CountryConqueredMessage', 'country': country_id, 'user': session.user.name})
+        else:
+            print("Country is not available for conquer?!")
+
+        await session.game.roundStep()
 
     def __str__(self):
         return "<Game: "+self.name+">"
@@ -238,9 +249,12 @@ async def handler(websocket, path):
             elif (frame_type == 'StartGameMessage'):
                 if(session != None):
                     await session.game.start()
-            elif (frame_type == 'MoveFinishedMessage'):
+            #elif (frame_type == 'MoveFinishedMessage'):
+            #    if(session != None):
+            #        await session.game.roundStep()
+            elif (frame_type == 'ConquerMoveFinishedMessage'):
                 if(session != None):
-                    await session.game.roundStep()
+                    await session.game.conquerCountry(session, obj['country'])
             else:
                 print("Unknown message received: " + str(obj))
         except websockets.exceptions.ConnectionClosed:
