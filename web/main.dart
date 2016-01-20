@@ -360,8 +360,10 @@ void main() {
     } else if(m is GameStateChangedMessage) {
       print('Game state changed: ${m.state}');
     } else if(m is NextMoveMessage) {
-      print('Your move!');
       finishMoveButton.attributes.remove('disabled');
+      if(m is ConquerMoveMessage) {
+        print('Conquer move -> Let user select a free country!');
+      }
     }
   });
 

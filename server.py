@@ -178,19 +178,16 @@ class Game:
         except StopIteration:
             self.user_round_iterator = iter(self.users)
             next_user = next(self.user_round_iterator)
-            print("No next user in iterator!")
             pass
 
         if (self.state == GameState.preparation):
-            # check if preparation complete?
-            if False:
-                # go to next state here!
-                pass
+            if self.preparation_phase == PreparationPhase.CONQUER:
+                message = {'type':'ConquerMoveMessage'}
             else:
-                print("Next User: " + str(next_user))
-                for session in next_user.sessions:
-                    print("Send next move to " + str(session))
-                    await session.sendMessage({'type':'NextMoveMessage'})
+                message = {'type':'ReinforceMoveMessage'}
+
+            for session in next_user.sessions:
+                await session.sendMessage(message)
 
     def __str__(self):
         return "<Game: "+self.name+">"

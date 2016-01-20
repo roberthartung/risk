@@ -27,6 +27,14 @@ class NextMoveMessage extends Message {
   NextMoveMessage.fromObject(obj) : super.fromObject(obj);
 }
 
+class ConquerMoveMessage extends NextMoveMessage {
+  ConquerMoveMessage.fromObject(obj) : super.fromObject(obj);
+}
+
+class ReinforceMoveMessage extends NextMoveMessage {
+  ReinforceMoveMessage.fromObject(obj) : super.fromObject(obj);
+}
+
 class MoveFinishedMessage extends Message {
   MoveFinishedMessage() : super();
 }

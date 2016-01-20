@@ -59,8 +59,11 @@ class ServerConnection {
         case 'GameStateChangedMessage' :
           _messageController.add(new GameStateChangedMessage.fromObject(obj));
           break;
-        case 'NextMoveMessage':
-          _messageController.add(new NextMoveMessage.fromObject(obj));
+        case 'ConquerMoveMessage':
+          _messageController.add(new ConquerMoveMessage.fromObject(obj));
+          break;
+        case 'ReinforceMoveMessage':
+          _messageController.add(new ReinforceMoveMessage.fromObject(obj));
           break;
         default :
           _messageController.addError(obj);
