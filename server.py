@@ -198,6 +198,10 @@ class Game:
         else:
             print("Country is not available for conquer?!")
 
+        if len(self.available_countries) == 0:
+            self.preparation_phase = PreparationPhase.REINFORCE
+            self.user_round_iterator = None
+
         await session.game.roundStep()
 
     def __str__(self):

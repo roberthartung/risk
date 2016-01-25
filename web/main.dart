@@ -14,7 +14,8 @@ const num MAP_MARGIN = 30;
 const num MAP_PADDING = 20;
 
 enum MoveType {
-  CONQUER
+  CONQUER,
+  REINFORCE
 }
 
 class GameRenderer {
@@ -144,17 +145,29 @@ class GameRenderer {
     });
   }
 
+  final int TEXT_PADDING = 10;
+
   void renderLabels() {
     game.world.continents.forEach((Continent continent) {
       continent.countries.forEach((Country country) {
         if(selectedCountry == null || selectedCountry == country || (game.world.connectedCountries[selectedCountry] != null && game.world.connectedCountries[selectedCountry].contains(country))) {
           var dim = ctx_hl.measureText(country.name);
-          ctx_hl.textBaseline="middle";
+          ctx_hl.textBaseline = "middle";
           ctx_hl.fillStyle = 'rgba(255,255,255,0.85)';
-          ctx_hl.fillRect(country.middle.x - dim.width/2 - 10/2, country.middle.y-16/2, dim.width+10, 16);
+          ctx_hl.fillRect(country.middle.x - dim.width/2 - TEXT_PADDING/2, country.middle.y-16/2, dim.width+TEXT_PADDING, 16);
           ctx_hl.fillStyle = 'black';
           ctx_hl.fillText(country.name, country.middle.x - dim.width/2, country.middle.y);
         }
+
+        //if(country.armySize > 0) {
+          var text = country.armySize.toString();
+          var dim = ctx_hl.measureText(text);
+          ctx_hl.textBaseline = "middle";
+          ctx_hl.fillStyle = 'rgba(255,255,255,0.85)';
+          ctx_hl.fillRect(country.middle.x - dim.width/2 - TEXT_PADDING/2, country.middle.y + 20 - 16/2, dim.width+TEXT_PADDING, 16);
+          ctx_hl.fillStyle = 'black';
+          ctx_hl.fillText(text, country.middle.x - dim.width/2, country.middle.y + 20);
+        //}
       });
     });
   }
@@ -449,9 +462,15 @@ class Game {
       } else if(m is NextMoveMessage) {
         if(m is ConquerMoveMessage) {
           _nextMoveController.add(MoveType.CONQUER);
+        } else if(m is ReinforceMoveMessage) {
+          _nextMoveController.add(MoveType.REINFORCE);
         }
       } else if(m is CountryConqueredMessage) {
         m.country.user = m.user;
+        m.country.armySize = 1;
+        game.renderer.requestRender();
+      } else if(m is CountryReinforcedMessage) {
+        m.country.armySize++;
         game.renderer.requestRender();
       }
     });
@@ -499,27 +518,51 @@ void main() {
   });
 
   game.onNextMove.listen((MoveType move) {
-    if(move == MoveType.CONQUER) {
-      Country countryToConquer;
-      StreamSubscription waitForSelection;
-      StreamSubscription waitForDeselection;
-      waitForSelection = game.inputDevice.onCountrySelected.listen((Country country) {
-        if(country.user == null) {
-          countryToConquer = country;
-          finishMoveButton.attributes.remove('disabled');
-        }
-      });
+    switch(move) {
+      case MoveType.CONQUER :
+        Country countryToConquer;
+        StreamSubscription waitForSelection;
+        StreamSubscription waitForDeselection;
+        waitForSelection = game.inputDevice.onCountrySelected.listen((Country country) {
+          if(country.user == null) {
+            countryToConquer = country;
+            finishMoveButton.attributes.remove('disabled');
+          }
+        });
 
-      waitForDeselection = game.inputDevice.onCountryDeselected.listen((Country country) {
-        finishMoveButton.attributes['disabled'] = 'disabled';
-      });
+        waitForDeselection = game.inputDevice.onCountryDeselected.listen((Country country) {
+          finishMoveButton.attributes['disabled'] = 'disabled';
+        });
 
-      finishMoveButton.onClick.first.then((_) {
-        waitForSelection.cancel();
-        waitForDeselection.cancel();
-        game.server.send(new ConquerMoveFinishedMessage(countryToConquer));
-      });
+        finishMoveButton.onClick.first.then((_) {
+          waitForSelection.cancel();
+          waitForDeselection.cancel();
+          game.server.send(new ConquerMoveFinishedMessage(countryToConquer));
+        });
+        break;
+      case MoveType.REINFORCE :
+        Country countryToReinforce;
+        StreamSubscription waitForSelection;
+        StreamSubscription waitForDeselection;
+        waitForSelection = game.inputDevice.onCountrySelected.listen((Country country) {
+          if(country.user == game.localUser) {
+            countryToReinforce = country;
+            finishMoveButton.attributes.remove('disabled');
+          }
+        });
+
+        waitForDeselection = game.inputDevice.onCountryDeselected.listen((Country country) {
+          finishMoveButton.attributes['disabled'] = 'disabled';
+        });
+
+        finishMoveButton.onClick.first.then((_) {
+          waitForSelection.cancel();
+          waitForDeselection.cancel();
+          game.server.send(new ConquerMoveFinishedMessage(countryToReinforce));
+        });
+        break;
     }
+
     print('Next Move: $move');
   });
 

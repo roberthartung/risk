@@ -47,6 +47,8 @@ class Country {
   /// User who conquered this country!
   User user = null;
 
+  int armySize = 0;
+
   /// Indicator if this country is hovered!
   bool isMouseOver = false;
 

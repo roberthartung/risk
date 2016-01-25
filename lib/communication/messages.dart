@@ -130,3 +130,8 @@ class CountryConqueredMessage extends CountryMessage {
   final User user;
   CountryConqueredMessage.fromObject(obj) : super.fromObject(obj), this.user = new User(obj['user']);
 }
+
+class CountryReinforcedMessage extends CountryMessage {
+  final User user;
+  CountryReinforcedMessage.fromObject(obj) : super.fromObject(obj), this.user = new User(obj['user']);
+}
