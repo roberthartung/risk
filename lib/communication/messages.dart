@@ -46,7 +46,7 @@ class LoginMessage extends Message {
   final String pass;
   final String game;
 
-  LoginMessage(this.name, this.game, this.pass);
+  LoginMessage(this.name, this.pass, this.game);
 
   LoginMessage.fromObject(obj) : super.fromObject(obj), this.name = obj['name'], this.game = obj['game'], this.pass = obj['pass'];
   Map toObject() {

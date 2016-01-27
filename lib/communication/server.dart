@@ -7,6 +7,9 @@ class ServerConnection {
   final StreamController<Message> _messageController = new StreamController.broadcast();
   Stream<Message> get onMessage => _messageController.stream;
 
+  final StreamController _onConnectedController = new StreamController.broadcast();
+  Stream get onConnected => _onConnectedController.stream;
+
   WebSocket _ws;
   Timer _reconnectTimer = null;
   bool get isConnected => _ws.readyState == WebSocket.OPEN;
@@ -23,6 +26,7 @@ class ServerConnection {
         _reconnectTimer.cancel();
         _reconnectTimer = null;
       }
+      _onConnectedController.add(null);
     });
 
     _ws.onClose.listen((_) {

@@ -1,9 +1,10 @@
 library risk.game;
 
-import 'dart:html';
+
 import 'dart:async';
 import 'user.dart';
-import 'input.dart';
+import 'package:observe/observe.dart';
+
 import 'world/world.dart';
 import 'communication/server.dart';
 import 'communication/messages.dart';
@@ -20,7 +21,7 @@ enum GameState {
   finished
 }
 
-class Game {
+class Game extends Observable {
   final StreamController<User> _userJoinedController = new StreamController.broadcast();
   Stream<User> get onUserJoin => _userJoinedController.stream;
 
@@ -41,16 +42,16 @@ class Game {
   World world;
   ServerConnection _server;
   ServerConnection get server => _server;
-  User localUser;
-  GameState state;
+  @observable User leader;
+  @observable User localUser;
+  @observable GameState state;
+  @observable ObservableList users = new ObservableList();
 
-  Game() {
-    // TODO(rh): Wait for map to be loaded and attach event listeners
+  Game(this._server) {
+    _setupServer();
   }
 
-  void setupServer() {
-    //String me = null;
-    _server = new ServerConnection("ws://${window.location.hostname}:5678");
+  void _setupServer() {
     _server.onMessage.listen((Message m) {
       if(m is UserJoinedMessage) {
         _userJoinedController.add(new User(m.user));
@@ -64,6 +65,8 @@ class Game {
       } else if(m is GameInformationMessage) {
         localUser = new User(m.me);
         _leaderChangedController.add(new User(m.leader));
+        state = m.state;
+        _gameStateChangedController.add(m.state);
       } else if(m is GameStateChangedMessage) {
         state = m.state;
         _gameStateChangedController.add(m.state);
@@ -80,7 +83,21 @@ class Game {
       } else if(m is CountryReinforcedMessage) {
         m.country.armySize++;
         //game.renderer.requestRender();
+      } else if(m is LeaderChangedMessage) {
+        _leaderChangedController.add(new User(m.leader));
       }
+    });
+
+    onUserJoin.listen((User u) {
+      users.add(u);
+    });
+
+    onUserLeave.listen((User u) {
+      users.remove(u);
+    });
+
+    onLeaderChange.listen((User u) {
+      leader = u;
     });
   }
 }

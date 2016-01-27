@@ -2,10 +2,58 @@
 
 <polymer-element name="game-ui">
     <template>
+        <style type="text/css">
+            #login {
+                height: 100vh;
+                width: 100vw;
+            }
+
+            #login > div {
+                width: 300px;
+                margin: 0 auto;
+                margin-top: 50vh;
+            }
+        </style>
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css" integrity="sha384-fLW2N01lMqjakBkx3l/M9EahuwpSfeNvV63J5ezn3uZzapT0u7EYsXMjQV+0En5r" crossorigin="anonymous">
         <div id="login">
-            Login?
+            <div>
+                <form id="login-form" method="POST" action="#">
+                    <input id="login-user" type="text" name="user" placeholder="Your name" class="form-control">
+
+                    <input id="login-pass" type="password" name="password" placeholder="Your password" class="form-control">
+
+                    <input id="login-game" type="text" name="game" placeholder="Game name" class="form-control">
+
+                    <button class="btn btn-primary pull-right">Login</button>
+                </form>
+            </div>
         </div>
-        <game-map id="map" map="map.svg"></game-map>
+        <div id="lobby" hidden="true">
+            <h2>Lobby</h2>
+
+            Local User: {{game.localUser}}<br>
+            Leader: {{game.leader}}<br>
+            Game State: {{game.state}}<br>
+
+            <h3>Users:</h3>
+            <ul>
+                <template repeat="{{user in game.users}}">
+                <li>{{user}}</li>
+                </template>
+            </ul>
+
+            <template if="{{game.localUser == game.leader}}">
+                <h1>LEADER</h1>
+                <select id="lobby-map">
+                    <option value="map.svg">Default map</option>
+                </select>
+            </template>
+        </div>
+        <div id="game" hidden="true">
+            <game-map id="map" map="map.svg"></game-map>
+        </div>
+        <!--<game-map id="map" map="map.svg"></game-map>-->
     </template>
     <script type="application/dart" src="game_ui.dart"></script>
 </polymer-element>
