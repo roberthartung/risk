@@ -1,3 +1,5 @@
+library risk.user;
+
 class User {
   final String name;
 

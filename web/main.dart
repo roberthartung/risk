@@ -10,14 +10,10 @@ import 'package:risk/communication/server.dart';
 import 'package:risk/communication/messages.dart';
 import 'package:risk/world/world.dart';
 import 'package:risk/user.dart';
+import 'package:polymer/polymer.dart';
 
 const num MAP_MARGIN = 30;
 const num MAP_PADDING = 20;
-
-enum MoveType {
-  CONQUER,
-  REINFORCE
-}
 
 /*
 class GameRenderer {
@@ -294,228 +290,11 @@ class GameRenderer {
 }
 */
 
-// Handle input e.g. hover or click countries!
-abstract class InputDevice {
-  Stream<Country> get onCountrySelected;
-  Stream<Country> get onCountryDeselected;
-  Stream<Country> get onCountryMouseOver;
-  Stream<Country> get onCountryMouseOut;
-}
-
-class MouseInputDevice extends InputDevice {
-  Point mouse_position = null;
-
-  StreamController<Country> _countrySelectedController = new StreamController.broadcast();
-  Stream<Country> get onCountrySelected => _countrySelectedController.stream;
-
-  StreamController<Country> _countryDeselectedController = new StreamController.broadcast();
-  Stream<Country> get onCountryDeselected => _countryDeselectedController.stream;
-
-  StreamController<Country> _countryMouseOverController = new StreamController.broadcast();
-  Stream<Country> get onCountryMouseOver => _countryMouseOverController.stream;
-
-  StreamController<Country> _countryMouseOutController = new StreamController.broadcast();
-  Stream<Country> get onCountryMouseOut => _countryMouseOutController.stream;
-
-  //Country hoveredCountry = null;
-  Country selectedCountry = null;
-
-  final Game game;
-
-  MouseInputDevice(Element container, this.game) {
-    container.onClick.listen((MouseEvent ev) {
-      if(ev.target is PathElement) {
-        PathElement path = ev.target;
-        if(path.classes.contains('countrypart')) {
-          GElement countryElement = path.parent;
-          Country country = Country.countries[countryElement.id];
-          if(country == null) {
-            throw "Click on unknown country";
-          }
-
-          if(selectedCountry != null) {
-            _countryDeselectedController.add(selectedCountry);
-          }
-
-          selectedCountry = country;
-          _countrySelectedController.add(selectedCountry);
-        }
-      } else if(selectedCountry != null) {
-        //print('Click to unknown target: ${ev.target}');
-        _countryDeselectedController.add(selectedCountry);
-        selectedCountry = null;
-      }
-    });
-  /*
-    game.renderer.canvas_hl.onMouseMove.listen((MouseEvent ev) {
-      game.renderer.ctx_hl.save();
-      game.renderer.ctx_hl.translate(MAP_MARGIN+MAP_PADDING,MAP_MARGIN+MAP_PADDING);
-      game.renderer.ctx_hl.scale(game.renderer.scaleX, game.renderer.scaleY);
-      mouse_position = ev.offset;
-
-      if(hoveredCountry != null) {
-        checkCountry(hoveredCountry);
-      }
-
-      Country.countries.forEach((String id, Country country) {
-        checkCountry(country);
-      });
-      game.renderer.ctx_hl.restore();
-    });
-    */
-    /*
-    game.renderer.canvas_hl.onClick.listen((MouseEvent ev) {
-      if(hoveredCountry != null) {
-        /// Do nothing if same country has been clicked again
-        if(selectedCountry == hoveredCountry) {
-          return;
-        }
-        /// In case it is a different country fire deselected event!
-        if(selectedCountry != null) {
-          _countryDeselectedController.add(selectedCountry);
-        }
-        selectedCountry = hoveredCountry;
-        _countrySelectedController.add(hoveredCountry);
-      } else if(selectedCountry != null) {
-        _countryDeselectedController.add(selectedCountry);
-        selectedCountry = null;
-      }
-    });
-    */
-    /// TODO(rh)
-  }
-  /*
-  void checkCountry(Country country) {
-    bool isMouseOver = false;
-    country.parts.forEach((CountryPart part) {
-      if(game.renderer.ctx_hl.isPointInPath(part.path, mouse_position.x, mouse_position.y)) {
-        isMouseOver = true;
-      }
-    });
-
-    if(country.isMouseOver) {
-      if(!isMouseOver) {
-        country.isMouseOver = false;
-        hoveredCountry = null;
-        _countryMouseOutController.add(country);
-      }
-    } else {
-      if(isMouseOver) {
-        country.isMouseOver = true;
-        hoveredCountry = country;
-        _countryMouseOverController.add(country);
-      }
-    }
-  }
-  */
-}
-
-class Game {
-  final StreamController<User> _userJoinedController = new StreamController.broadcast();
-  Stream<User> get onUserJoin => _userJoinedController.stream;
-
-  final StreamController<User> _userLeftController = new StreamController.broadcast();
-  Stream<User> get onUserLeave => _userLeftController.stream;
-
-  final StreamController<User> _leaderChangedController = new StreamController.broadcast();
-  Stream<User> get onLeaderChange => _leaderChangedController.stream;
-
-  final StreamController<GameState> _gameStateChangedController = new StreamController.broadcast();
-  Stream<GameState> get onStateChange => _gameStateChangedController.stream;
-
-  final StreamController<MoveType> _nextMoveController = new StreamController.broadcast();
-  Stream<MoveType> get onNextMove => _nextMoveController.stream;
-
-  //GameRenderer _renderer;
-  //GameRenderer get renderer => _renderer;
-  World world;
-  InputDevice _inputDevice;
-  InputDevice get inputDevice => _inputDevice;
-  ServerConnection _server;
-  ServerConnection get server => _server;
-  User localUser;
-  GameState state;
-
-  Game(container) {
-    loadWorld(container, 'map.svg').then((World world) => _worldLoaded(world, container));
-  }
-
-  void _worldLoaded(World world, Element container) {
-    this.world = world;
-
-    _inputDevice = new MouseInputDevice(container, this);
-    setupServer();
-
-    _inputDevice.onCountrySelected.listen((Country country) {
-      if(state == GameState.preparation) {
-        /// ....
-      }
-      country.element.classes.add('selected');
-
-      // renderer.setSelectedCountry(country);
-    });
-
-    _inputDevice.onCountryDeselected.listen((Country country) {
-      // renderer.setSelectedCountry(null);
-      country.element.classes.remove('selected');
-    });
-
-    _inputDevice.onCountryMouseOver.listen((Country country) {
-      //print('Country over: $country');
-      //renderer.requestRender();
-    });
-
-    _inputDevice.onCountryMouseOut.listen((Country country) {
-      //print('Country out: $country');
-      //renderer.requestRender();
-    });
-
-    //renderer.updateSize();
-  }
-
-  void setupServer() {
-    //String me = null;
-    _server = new ServerConnection("ws://${window.location.hostname}:5678");
-    _server.onMessage.listen((Message m) {
-      if(m is UserJoinedMessage) {
-        _userJoinedController.add(new User(m.user));
-      } else if(m is UserQuitMessage) {
-        _userLeftController.add(new User(m.user));
-      } else if(m is ListOfUsersMessage) {
-        m.users.forEach((String name) {
-          _userJoinedController.add(new User(name));
-        });
-        //print('List of users: ${m.users}');
-      } else if(m is GameInformationMessage) {
-        localUser = new User(m.me);
-        _leaderChangedController.add(new User(m.leader));
-      } else if(m is GameStateChangedMessage) {
-        state = m.state;
-        _gameStateChangedController.add(m.state);
-      } else if(m is NextMoveMessage) {
-        if(m is ConquerMoveMessage) {
-          _nextMoveController.add(MoveType.CONQUER);
-        } else if(m is ReinforceMoveMessage) {
-          _nextMoveController.add(MoveType.REINFORCE);
-        }
-      } else if(m is CountryConqueredMessage) {
-        m.country.user = m.user;
-        m.country.armySize = 1;
-        //game.renderer.requestRender();
-      } else if(m is CountryReinforcedMessage) {
-        m.country.armySize++;
-        //game.renderer.requestRender();
-      }
-    });
-  }
-}
-
-Game game;
-
 void main() {
+  initPolymer();
   // querySelector('#canvas-background'), querySelector('#canvas-highlight')
-  game = new Game(querySelector('#game'));
 
+  /*
   TableSectionElement users_list_element = querySelector('#users-list');
 
   final NodeValidator userListNodeValidator = new NodeValidatorBuilder()
@@ -592,7 +371,7 @@ void main() {
         finishMoveButton.onClick.first.then((_) {
           waitForSelection.cancel();
           waitForDeselection.cancel();
-          game.server.send(new ConquerMoveFinishedMessage(countryToReinforce));
+          game.server.send(new ReinforceMoveFinishedMessage(countryToReinforce));
         });
         break;
     }
@@ -621,4 +400,5 @@ void main() {
     game.server.send(new LoginMessage(input_login_name.value, input_login_game.value, input_login_pass.value));
     //server.send(JSON.encode({'type':'login','name':input_login_name.value,'game':input_login_game.value}));
   });
+  */
 }

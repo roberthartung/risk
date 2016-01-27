@@ -13,6 +13,9 @@
     <meta name="scaffolded-by" content="https://github.com/google/stagehand">
     <title>risk</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="import" href="packages/polymer/polymer.html">
+    <link rel="import" href="packages/risk/elements/game_ui.html">
+    <link rel="import" href="packages/risk/elements/game_map.html">
     <script async src="main.dart" type="application/dart"></script>
     <script async src="packages/browser/dart.js"></script>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
@@ -21,10 +24,7 @@
 </head>
 
 <body>
-    <div id="game">
-        <!--<canvas id="canvas-background"></canvas>
-        <canvas id="canvas-highlight"></canvas>-->
-    </div>
+    <game-ui></game-ui>
     <div id="sidebar" style="display:none;">
         <section id="login">
             <input type="text" class="form-control" placeholder="Your Name" id="login-name">
@@ -39,12 +39,12 @@
 
             <table class="table">
                 <thead>
-                    <tr>
-                        <th colspan="2">Name</th>
-                        <th>Countries</th>
-                        <th>Cards</th>
-                        <th>Army</th>
-                    </tr>
+                <tr>
+                    <th colspan="2">Name</th>
+                    <th>Countries</th>
+                    <th>Cards</th>
+                    <th>Army</th>
+                </tr>
                 </thead>
                 <tbody id="users-list"></tbody>
             </table>

@@ -55,7 +55,7 @@ button[hidden] {
     height: 15px;
 }
 
-.country:hover path {
+.country:hover path, .country.selected path {
     fill: red !important;
 }
 

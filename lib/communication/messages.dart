@@ -1,12 +1,6 @@
 import 'package:risk/world/world.dart';
 import 'package:risk/user.dart';
-
-enum GameState {
-  lobby,
-  preparation,
-  started,
-  finished
-}
+import 'package:risk/game.dart' show GameState;
 
 class Message {
   Message() {
@@ -125,6 +119,11 @@ class CountryMessage extends Message {
 class ConquerMoveFinishedMessage extends CountryMessage {
   ConquerMoveFinishedMessage(country) : super(country);
 }
+
+class ReinforceMoveFinishedMessage extends CountryMessage {
+  ReinforceMoveFinishedMessage(country) : super(country);
+}
+
 
 class CountryConqueredMessage extends CountryMessage {
   final User user;
