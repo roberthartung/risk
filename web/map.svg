@@ -29,10 +29,10 @@
         <feComposite in2="offsetblur" operator="in"/>
         <feComposite in2="SourceAlpha" operator="in" />
         <feMerge>
-          <feMergeNode in="SourceGraphic" />
-          <feMergeNode />
+            <feMergeNode in="SourceGraphic" />
+            <feMergeNode />
         </feMerge>
-      </filter> 
+    </filter>
   </defs>
   <sodipodi:namedview
      id="base"
