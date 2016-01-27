@@ -4,6 +4,7 @@
 import 'dart:html' ;
 import 'dart:async';
 import 'dart:math' show Rectangle, Point;
+import 'dart:svg' show PathElement, GElement;
 
 import 'package:risk/communication/server.dart';
 import 'package:risk/communication/messages.dart';
@@ -18,6 +19,7 @@ enum MoveType {
   REINFORCE
 }
 
+/*
 class GameRenderer {
   num _scaleX = 1;
   num _scaleY = 1;
@@ -290,6 +292,7 @@ class GameRenderer {
     ctx_bg.restore();
   }
 }
+*/
 
 // Handle input e.g. hover or click countries!
 abstract class InputDevice {
@@ -314,12 +317,36 @@ class MouseInputDevice extends InputDevice {
   StreamController<Country> _countryMouseOutController = new StreamController.broadcast();
   Stream<Country> get onCountryMouseOut => _countryMouseOutController.stream;
 
-  Country hoveredCountry = null;
+  //Country hoveredCountry = null;
   Country selectedCountry = null;
 
   final Game game;
 
-  MouseInputDevice(this.game) {
+  MouseInputDevice(Element container, this.game) {
+    container.onClick.listen((MouseEvent ev) {
+      if(ev.target is PathElement) {
+        PathElement path = ev.target;
+        if(path.classes.contains('countrypart')) {
+          GElement countryElement = path.parent;
+          Country country = Country.countries[countryElement.id];
+          if(country == null) {
+            throw "Click on unknown country";
+          }
+
+          if(selectedCountry != null) {
+            _countryDeselectedController.add(selectedCountry);
+          }
+
+          selectedCountry = country;
+          _countrySelectedController.add(selectedCountry);
+        }
+      } else if(selectedCountry != null) {
+        //print('Click to unknown target: ${ev.target}');
+        _countryDeselectedController.add(selectedCountry);
+        selectedCountry = null;
+      }
+    });
+  /*
     game.renderer.canvas_hl.onMouseMove.listen((MouseEvent ev) {
       game.renderer.ctx_hl.save();
       game.renderer.ctx_hl.translate(MAP_MARGIN+MAP_PADDING,MAP_MARGIN+MAP_PADDING);
@@ -335,7 +362,8 @@ class MouseInputDevice extends InputDevice {
       });
       game.renderer.ctx_hl.restore();
     });
-
+    */
+    /*
     game.renderer.canvas_hl.onClick.listen((MouseEvent ev) {
       if(hoveredCountry != null) {
         /// Do nothing if same country has been clicked again
@@ -353,8 +381,10 @@ class MouseInputDevice extends InputDevice {
         selectedCountry = null;
       }
     });
+    */
+    /// TODO(rh)
   }
-
+  /*
   void checkCountry(Country country) {
     bool isMouseOver = false;
     country.parts.forEach((CountryPart part) {
@@ -377,6 +407,7 @@ class MouseInputDevice extends InputDevice {
       }
     }
   }
+  */
 }
 
 class Game {
@@ -395,8 +426,8 @@ class Game {
   final StreamController<MoveType> _nextMoveController = new StreamController.broadcast();
   Stream<MoveType> get onNextMove => _nextMoveController.stream;
 
-  GameRenderer _renderer;
-  GameRenderer get renderer => _renderer;
+  //GameRenderer _renderer;
+  //GameRenderer get renderer => _renderer;
   World world;
   InputDevice _inputDevice;
   InputDevice get inputDevice => _inputDevice;
@@ -405,39 +436,41 @@ class Game {
   User localUser;
   GameState state;
 
-  Game(canvas_bg, canvas_hl, container) {
-    loadWorld('map.svg').then((World world) => _worldLoaded(world, canvas_bg, canvas_hl, container));
+  Game(container) {
+    loadWorld(container, 'map.svg').then((World world) => _worldLoaded(world, container));
   }
 
-  void _worldLoaded(World world, canvas_bg, canvas_hl, container) {
+  void _worldLoaded(World world, Element container) {
     this.world = world;
 
-    _renderer = new GameRenderer(canvas_bg, canvas_hl, container, this);
-    _inputDevice = new MouseInputDevice(this);
+    _inputDevice = new MouseInputDevice(container, this);
     setupServer();
 
     _inputDevice.onCountrySelected.listen((Country country) {
       if(state == GameState.preparation) {
         /// ....
       }
-      renderer.setSelectedCountry(country);
+      country.element.classes.add('selected');
+
+      // renderer.setSelectedCountry(country);
     });
 
     _inputDevice.onCountryDeselected.listen((Country country) {
-      renderer.setSelectedCountry(null);
+      // renderer.setSelectedCountry(null);
+      country.element.classes.remove('selected');
     });
 
     _inputDevice.onCountryMouseOver.listen((Country country) {
       //print('Country over: $country');
-      renderer.requestRender();
+      //renderer.requestRender();
     });
 
     _inputDevice.onCountryMouseOut.listen((Country country) {
       //print('Country out: $country');
-      renderer.requestRender();
+      //renderer.requestRender();
     });
 
-    renderer.updateSize();
+    //renderer.updateSize();
   }
 
   void setupServer() {
@@ -468,10 +501,10 @@ class Game {
       } else if(m is CountryConqueredMessage) {
         m.country.user = m.user;
         m.country.armySize = 1;
-        game.renderer.requestRender();
+        //game.renderer.requestRender();
       } else if(m is CountryReinforcedMessage) {
         m.country.armySize++;
-        game.renderer.requestRender();
+        //game.renderer.requestRender();
       }
     });
   }
@@ -480,7 +513,8 @@ class Game {
 Game game;
 
 void main() {
-  game = new Game(querySelector('#canvas-background'), querySelector('#canvas-highlight'), querySelector('#game'));
+  // querySelector('#canvas-background'), querySelector('#canvas-highlight')
+  game = new Game(querySelector('#game'));
 
   TableSectionElement users_list_element = querySelector('#users-list');
 
