@@ -55,10 +55,6 @@ button[hidden] {
     height: 15px;
 }
 
-.country:hover path, .country.selected path {
-    fill: red !important;
-}
-
 .country:hover circle {
     filter: url(#inset-shadow);
 }

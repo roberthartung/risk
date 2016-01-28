@@ -47,12 +47,18 @@ class Game extends Observable {
   @observable GameState state;
   @observable ObservableList users = new ObservableList();
 
-  Game(this._server) {
+  Game(uri) {
+    _server = new ServerConnection(uri);
     _setupServer();
+  }
+
+  void login(String user, String pass, String game) {
+    _server.send(new LoginMessage(user, pass, game));
   }
 
   void _setupServer() {
     _server.onMessage.listen((Message m) {
+      print('$m');
       if(m is UserJoinedMessage) {
         _userJoinedController.add(new User(m.user));
       } else if(m is UserQuitMessage) {
@@ -85,6 +91,10 @@ class Game extends Observable {
         //game.renderer.requestRender();
       } else if(m is LeaderChangedMessage) {
         _leaderChangedController.add(new User(m.leader));
+      } else if(m is CountriesListMessage) {
+        /// TODO(rh): Update countries?
+        print('List: $m');
+        print(m.countries);
       }
     });
 

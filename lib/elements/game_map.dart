@@ -10,21 +10,44 @@ import 'package:risk/input.dart';
 class GameMap extends PolymerElement {
   World world;
   @published String map;
-  InputDevice _inputDevice;
-  InputDevice get inputDevice => _inputDevice;
+  @published bool lobby = false;
   StreamController<World> _onWorldLoadedController = new StreamController<World>.broadcast();
   Stream<World> get onWorldLoaded => _onWorldLoadedController.stream;
 
   GameMap.created() : super.created();
 
-  void ready() {
-    super.ready();
+  void attached() {
+    print('Loading world');
     loadWorld($['container'], map).then((World world) => _worldLoaded(world));
   }
 
   void _worldLoaded(World world) {
+    print('World loaded');
     this.world = world;
-    _inputDevice = new MouseInputDevice($['container']);
+    // _inputDevice = new MouseInputDevice($['container']);
     _onWorldLoadedController.add(world);
+  }
+
+  void attach(InputDevice inputDevice) {
+    inputDevice.attach($['container']);
+    inputDevice.onCountrySelected.listen((Country country) {
+      print('selected');
+      country.element.classes.add('selected');
+    });
+
+    inputDevice.onCountryDeselected.listen((Country country) {
+      print('deselected');
+      country.element.classes.remove('selected');
+    });
+
+    inputDevice.onCountryMouseOver.listen((Country country) {
+      //print('Country over: $country');
+      //renderer.requestRender();
+    });
+
+    inputDevice.onCountryMouseOut.listen((Country country) {
+      //print('Country out: $country');
+      //renderer.requestRender();
+    });
   }
 }

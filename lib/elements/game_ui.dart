@@ -9,22 +9,20 @@ import 'game_map.dart';
 import 'package:risk/world/world.dart';
 import 'package:risk/communication/server.dart';
 import 'package:risk/communication/messages.dart';
+import 'package:risk/input.dart';
 
 @CustomTag('game-ui')
 class GameUi extends PolymerElement {
   @observable Game game;
   GameMap map;
-  ServerConnection _server;
+  InputDevice _inputDevice;
+  InputDevice get inputDevice => _inputDevice;
+
   GameUi.created() : super.created();
 
   void ready() {
     super.ready();
     login_show();
-    print('$this ready');
-    /*
-    map = $['map'];
-    map.onWorldLoaded.listen(_onWorldLoaded);
-    */
   }
 
   void login_show() {
@@ -32,7 +30,6 @@ class GameUi extends PolymerElement {
     login_form.onSubmit.listen((Event ev) {
       ev.preventDefault();
       login_do();
-
       return true;
     });
   }
@@ -42,90 +39,136 @@ class GameUi extends PolymerElement {
     InputElement login_input_pass = $['login-pass'];
     InputElement login_input_game = $['login-game'];
 
-    server_setup().then((ServerConnection conn) {
-      ($['login'] as Element).hidden = true;
-      game = new Game(conn);
-      game.onStateChange.listen((GameState newState) {
-        print('Game state changed: $newState');
-        switch(newState) {
-          case GameState.lobby :
-              lobby_show();
-            break;
-          case GameState.preparation :
-          case GameState.started :
-              game_show();
-            break;
-          case GameState.finished :
-              /// Display finished
-            break;
-        }
-      });
-      /*
-      StreamSubscription _scr;
-      _scr = conn.onMessage.listen((Message m) {
-        if(m is GameInformationMessage) {
-          /// Depending on the game state, we have to display different
-          /// information to the user
-          _scr.cancel();
-        } else {
-          print('Unknown message');
-        }
-      });
-      */
-
-      conn.send(new LoginMessage(login_input_user.value, login_input_pass.value, login_input_game.value));
+    _inputDevice = new MouseInputDevice();
+    /// At this point, we want to login to the server
+    game = new Game("ws://${window.location.hostname}:5678");
+    game_setup_logic();
+    game.server.onConnected.listen((_) {
+      game.login(login_input_user.value, login_input_pass.value, login_input_game.value);
     });
-  }
-
-  Future<ServerConnection> server_setup() {
-    Completer<ServerConnection> completer = new Completer();
-    if(_server != null && _server.isConnected) {
-      completer.complete(_server);
-    } else {
-      _server = new ServerConnection("ws://${window.location.hostname}:5678");
-      _server.onMessage.listen((Message m) {
-        print('Message: $m');
-      });
-      _server.onConnected.listen((_) {
-        completer.complete(_server);
-      });
-    }
-
-    return completer.future;
+    /// Only wait for first state here!
+    game.onStateChange.first.then((GameState newState) {
+      print('Initial game state: $newState');
+      ($['login'] as Element).hidden = true;
+      switch(newState) {
+        case GameState.lobby :
+            lobby_show();
+          break;
+        case GameState.preparation :
+        case GameState.started :
+            game_show('map.svg');
+          break;
+        case GameState.finished :
+            /// TODO(rh): Display finished message
+          break;
+      }
+    });
   }
 
   void lobby_show() {
     $['lobby'].hidden = false;
-  }
-
-  void game_show() {
-    $['game'].hidden = false;
-  }
-
-  void _onWorldLoaded(World world) {
-    /// game = new Game(world, map.inputDevice);
-    /*map.inputDevice.onCountrySelected.listen((Country country) {
-      if(state == GameState.preparation) {
-        /// ....
+    StreamSubscription sub;
+    sub = ($['lobby-start'] as ButtonElement).onClick.listen((MouseEvent ev) {
+      if(game.localUser == game.leader) {
+        game.server.send(new StartGameMessage());
+      } else {
+        throw "Request to start for non-leader.";
       }
-      country.element.classes.add('selected');
-      // renderer.setSelectedCountry(country);
     });
 
-    map.inputDevice.onCountryDeselected.listen((Country country) {
-      // renderer.setSelectedCountry(null);
-      country.element.classes.remove('selected');
+    StreamSubscription sub_state;
+    sub_state = game.onStateChange.listen((GameState state) {
+      if(state == GameState.started || state == GameState.preparation) {
+        $['lobby'].hidden = true;
+        sub.cancel();
+        String map = ($['lobby-map'] as SelectElement).value;
+        game_show(map);
+      }
+      sub_state.cancel();
+    });
+  }
+
+  void game_setup_logic() {
+    print('game_setup_logic');
+    game.onStateChange.listen((GameState state) {
+      switch(state) {
+        case GameState.preparation :
+
+          break;
+        case GameState.started :
+
+          break;
+        default :
+            print('Unexpected gamestate in logic: $state');
+          break;
+      }
     });
 
-    map.inputDevice.onCountryMouseOver.listen((Country country) {
-      //print('Country over: $country');
-      //renderer.requestRender();
-    });
+    ButtonElement finishMoveButton = $['game-move-finish'];
+    game.onNextMove.listen((MoveType move) {
+      /// TODO(rh): ...
+      finishMoveButton.attributes['disabled'] = 'disabled';
+      print('Next move: $move');
+      switch(move) {
+        case MoveType.CONQUER :
+          Country countryToConquer;
+          StreamSubscription waitForSelection;
+          StreamSubscription waitForDeselection;
+          waitForSelection = _inputDevice.onCountrySelected.listen((Country country) {
+            print('selected...');
+            if(country.user == null) {
+              countryToConquer = country;
+              finishMoveButton.attributes.remove('disabled');
+            }
+          });
 
-    map.inputDevice.onCountryMouseOut.listen((Country country) {
-      //print('Country out: $country');
-      //renderer.requestRender();
+          waitForDeselection = _inputDevice.onCountryDeselected.listen((Country country) {
+            finishMoveButton.attributes['disabled'] = 'disabled';
+          });
+
+          finishMoveButton.onClick.first.then((_) {
+            waitForSelection.cancel();
+            waitForDeselection.cancel();
+            game.server.send(new ConquerMoveFinishedMessage(countryToConquer));
+          });
+          break;
+        case MoveType.REINFORCE :
+          Country countryToReinforce;
+          StreamSubscription waitForSelection;
+          StreamSubscription waitForDeselection;
+          waitForSelection = _inputDevice.onCountrySelected.listen((Country country) {
+            print('selected...');
+            if(country.user == game.localUser) {
+              countryToReinforce = country;
+              finishMoveButton.attributes.remove('disabled');
+            }
+          });
+
+          waitForDeselection = _inputDevice.onCountryDeselected.listen((Country country) {
+            finishMoveButton.attributes['disabled'] = 'disabled';
+          });
+
+          finishMoveButton.onClick.first.then((_) {
+            waitForSelection.cancel();
+            waitForDeselection.cancel();
+            game.server.send(new ReinforceMoveFinishedMessage(countryToReinforce));
+          });
+          break;
+      }
     });
-    */
+  }
+
+  void game_show(String map_filename) {
+    /// Show Map
+    $['game'].hidden = false;
+    //final NodeValidator gameMapNodeValidator = new NodeValidatorBuilder()..allowElement('game-map', attributes: ['id', 'map']);
+    //$['game'].appendHtml('<game-map id="map" map="${map_filename}"></game-map>', validator: gameMapNodeValidator);
+    print('Foo: ${map_filename}');
+    map = new Element.tag('game-map');
+    map.setAttribute('map', map_filename);
+    map.onWorldLoaded.listen((World w) {
+      map.attach(_inputDevice);
+    });
+    $['game'].append(map);
   }
 }

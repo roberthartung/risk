@@ -13,6 +13,8 @@ abstract class InputDevice {
   Stream<Country> get onCountryDeselected;
   Stream<Country> get onCountryMouseOver;
   Stream<Country> get onCountryMouseOut;
+
+  void attach(Element container);
 }
 
 class MouseInputDevice extends InputDevice {
@@ -30,10 +32,13 @@ class MouseInputDevice extends InputDevice {
   StreamController<Country> _countryMouseOutController = new StreamController.broadcast();
   Stream<Country> get onCountryMouseOut => _countryMouseOutController.stream;
 
-  //Country hoveredCountry = null;
   Country selectedCountry = null;
 
-  MouseInputDevice(Element container) {
+  MouseInputDevice() {
+
+  }
+
+  void attach(Element container) {
     container.onClick.listen((MouseEvent ev) {
       if(ev.target is PathElement) {
         PathElement path = ev.target;
@@ -57,66 +62,5 @@ class MouseInputDevice extends InputDevice {
         selectedCountry = null;
       }
     });
-    /*
-    game.renderer.canvas_hl.onMouseMove.listen((MouseEvent ev) {
-      game.renderer.ctx_hl.save();
-      game.renderer.ctx_hl.translate(MAP_MARGIN+MAP_PADDING,MAP_MARGIN+MAP_PADDING);
-      game.renderer.ctx_hl.scale(game.renderer.scaleX, game.renderer.scaleY);
-      mouse_position = ev.offset;
-
-      if(hoveredCountry != null) {
-        checkCountry(hoveredCountry);
-      }
-
-      Country.countries.forEach((String id, Country country) {
-        checkCountry(country);
-      });
-      game.renderer.ctx_hl.restore();
-    });
-    */
-    /*
-    game.renderer.canvas_hl.onClick.listen((MouseEvent ev) {
-      if(hoveredCountry != null) {
-        /// Do nothing if same country has been clicked again
-        if(selectedCountry == hoveredCountry) {
-          return;
-        }
-        /// In case it is a different country fire deselected event!
-        if(selectedCountry != null) {
-          _countryDeselectedController.add(selectedCountry);
-        }
-        selectedCountry = hoveredCountry;
-        _countrySelectedController.add(hoveredCountry);
-      } else if(selectedCountry != null) {
-        _countryDeselectedController.add(selectedCountry);
-        selectedCountry = null;
-      }
-    });
-    */
-    /// TODO(rh)
   }
-/*
-  void checkCountry(Country country) {
-    bool isMouseOver = false;
-    country.parts.forEach((CountryPart part) {
-      if(game.renderer.ctx_hl.isPointInPath(part.path, mouse_position.x, mouse_position.y)) {
-        isMouseOver = true;
-      }
-    });
-
-    if(country.isMouseOver) {
-      if(!isMouseOver) {
-        country.isMouseOver = false;
-        hoveredCountry = null;
-        _countryMouseOutController.add(country);
-      }
-    } else {
-      if(isMouseOver) {
-        country.isMouseOver = true;
-        hoveredCountry = country;
-        _countryMouseOverController.add(country);
-      }
-    }
-  }
-  */
 }

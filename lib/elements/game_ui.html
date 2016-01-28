@@ -13,6 +13,10 @@
                 margin: 0 auto;
                 margin-top: 50vh;
             }
+
+            #lobby {
+                width: 300px;
+            }
         </style>
         <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
         <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css" integrity="sha384-fLW2N01lMqjakBkx3l/M9EahuwpSfeNvV63J5ezn3uZzapT0u7EYsXMjQV+0En5r" crossorigin="anonymous">
@@ -30,30 +34,27 @@
             </div>
         </div>
         <div id="lobby" hidden="true">
-            <h2>Lobby</h2>
-
-            Local User: {{game.localUser}}<br>
-            Leader: {{game.leader}}<br>
-            Game State: {{game.state}}<br>
-
             <h3>Users:</h3>
             <ul>
                 <template repeat="{{user in game.users}}">
-                <li>{{user}}</li>
+                <li>{{user.name}}</li>
                 </template>
             </ul>
 
-            <template if="{{game.localUser == game.leader}}">
-                <h1>LEADER</h1>
-                <select id="lobby-map">
+            Hide: {{game.localUser != game.leader}}
+
+            <div hidden?="{{game.localUser != game.leader}}">
+                <h3>Settings</h3>
+                Map: <select id="lobby-map">
                     <option value="map.svg">Default map</option>
                 </select>
-            </template>
+
+                <button id="lobby-start" class="btn btn-primary pull-right">Start game</button>
+            </div>
         </div>
         <div id="game" hidden="true">
-            <game-map id="map" map="map.svg"></game-map>
+            <button id="game-move-finish" class="btn btn-primary" disabled="disabled">Finish move</button>
         </div>
-        <!--<game-map id="map" map="map.svg"></game-map>-->
     </template>
     <script type="application/dart" src="game_ui.dart"></script>
 </polymer-element>

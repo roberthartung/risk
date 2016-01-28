@@ -83,6 +83,7 @@ class Game:
         self.sessions = set()
         self.users = set()
         self.leader = None
+        self.current_user = None
         self.user_round_iterator = None
         self.state = GameState.lobby
         self.name = name
@@ -142,6 +143,18 @@ class Game:
         await self.checkLeader()
         await new_session.sendMessage({'type': 'GameInformationMessage', 'state': self.state.value, 'leader': self.leader.name, 'you': new_session.user.name})
 
+        if (self.current_user != None) and (self.current_user == user):
+            print("Send move message after login")
+            await self.sendMoveMessage()
+
+        if self.state == GameState.preparation:
+            print("In preparation phase...")
+            countries = {}
+            for country_id, country in self.world.countries.items():
+                countries[country_id] = {'user': None if country.user == None else country.user.name,'army': 0}
+            msg = {'type':'CountriesListMessage','countries':countries}
+            await new_session.sendMessage(msg)
+
     # ...
     async def removeSession(self, session):
         self.sessions.remove(session)
@@ -169,30 +182,37 @@ class Game:
         self.available_countries = copy.copy(self.world.countries)
         # print(self.available_countries)
 
-    async def roundStep(self):
-        if (self.user_round_iterator == None):
-            self.user_round_iterator = iter(self.users)
-
-        next_user = None
-        try:
-            next_user = next(self.user_round_iterator)
-        except StopIteration:
-            self.user_round_iterator = iter(self.users)
-            next_user = next(self.user_round_iterator)
-            pass
-
+    async def sendMoveMessage(self):
         if (self.state == GameState.preparation):
             if self.preparation_phase == PreparationPhase.CONQUER:
                 message = {'type':'ConquerMoveMessage'}
             else:
                 message = {'type':'ReinforceMoveMessage'}
 
-            for session in next_user.sessions:
+            for session in self.current_user.sessions:
                 await session.sendMessage(message)
+
+    async def roundStep(self):
+        if (self.user_round_iterator == None):
+            self.user_round_iterator = iter(self.users)
+
+        # self.current_user = None
+        try:
+            self.current_user = next(self.user_round_iterator)
+        except StopIteration:
+            self.user_round_iterator = iter(self.users)
+            self.current_user = next(self.user_round_iterator)
+            pass
+
+        print("roundStep: " + str(self.current_user))
+
+        await self.sendMoveMessage()
 
     async def conquerCountry(self, session, country_id):
         if country_id in self.available_countries:
             print("Country is available for conquering!")
+            country = self.available_countries[country_id]
+            country.user = session.user
             del self.available_countries[country_id]
             await self.sendMessage({'type':'CountryConqueredMessage', 'country': country_id, 'user': session.user.name})
         else:

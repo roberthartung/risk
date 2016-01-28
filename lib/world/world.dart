@@ -129,6 +129,7 @@ void loadConnectors(World world, GElement connectorsElement) {
 
 Future loadWorld(Element container, String fileName) {
   return HttpRequest.request(fileName).then((HttpRequest request) {
+    print('Map file received');
     /// Create SVG object from responseText
     DocumentFragment svg = new DocumentFragment.svg(request.responseText);
     SvgSvgElement root = svg.querySelector('svg');

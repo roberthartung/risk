@@ -1,16 +1,27 @@
 <polymer-element name="game-map">
-    <style type="text/css">
-        #container {
-            position: absolute;
-            left: 0;
-            right: 0;
-            top: 0;
-            bottom: 0;
-        }
-    </style>
-
     <template>
-        <div id="container">PLACE MAP HERE</div>
+        <style>
+            :host {
+                display: block;
+            }
+
+            svg {
+                width: 100%;
+                height: auto;
+            }
+
+            svg .country:hover path, svg .country.selected path {
+                fill: red !important;
+            }
+        </style>
+        <template if="{{lobby}}">
+            <style type="text/css">
+                #container circle {
+                    display: none !important;
+                }
+            </style>
+        </template>
+        <div id="container"></div>
     </template>
     <script type="application/dart" src="game_map.dart"></script>
 </polymer-element>

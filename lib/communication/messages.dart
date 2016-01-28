@@ -134,3 +134,16 @@ class CountryReinforcedMessage extends CountryMessage {
   final User user;
   CountryReinforcedMessage.fromObject(obj) : super.fromObject(obj), this.user = new User(obj['user']);
 }
+
+class CountriesListMessage extends Message {
+  final Map countries;
+  CountriesListMessage.fromObject(obj) : super.fromObject(obj), this.countries = obj['countries'] {
+    countries.forEach((String id, Map data) {
+      Country country = new Country(id);
+      if(data['user'] != null) {
+        country.user = new User(data['user']);
+      }
+      country.armySize = data['army'];
+    });
+  }
+}

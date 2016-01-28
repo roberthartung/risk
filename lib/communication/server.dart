@@ -79,6 +79,9 @@ class ServerConnection {
         case 'CountryConqueredMessage' :
           _messageController.add(new CountryConqueredMessage.fromObject(obj));
           break;
+        case 'CountriesListMessage' :
+          _messageController.add(new CountriesListMessage.fromObject(obj));
+          break;
         default :
           _messageController.addError(obj);
           break;
