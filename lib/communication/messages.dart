@@ -57,7 +57,6 @@ class LoginMessage extends Message {
     return obj;
   }
 }
-
 class GameInformationMessage extends Message {
   final GameState state;
   final String leader;
@@ -66,18 +65,30 @@ class GameInformationMessage extends Message {
 }
 
 class ListOfUsersMessage extends Message {
-  final List<String> users;
-  ListOfUsersMessage.fromObject(obj) : super.fromObject(obj), this.users = obj['users'];
+  final List<User> users;
+  ListOfUsersMessage.fromObject(obj) : super.fromObject(obj), users = _unpackUsers(obj);
+
+  static List<User> _unpackUsers(obj) {
+    List<User> users = new List();
+    obj['users'].forEach((Map userObj) {
+      User user = new User(userObj['name']);
+      user.color = userObj['color'];
+      users.add(user);
+    });
+    return users;
+  }
 }
 
 class UserMessage extends Message {
   final String user;
-  UserMessage(this.user);
+  final String color;
+  UserMessage(this.user, [this.color = null]);
 
-  UserMessage.fromObject(obj) : super.fromObject(obj), this.user = obj['user'];
+  UserMessage.fromObject(Map obj) : super.fromObject(obj), this.user = obj['user'], this.color = obj.containsKey('color') ? obj['color'] : null;
+
   Map toObject() {
     Map obj = super.toObject();
-    obj['user'] = user;
+    obj['user'] = {'name': user, 'color': color};
     return obj;
   }
 }

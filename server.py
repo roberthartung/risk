@@ -11,6 +11,7 @@ import sys
 import copy
 
 mapinfo = gamemap.MapInfo('web/map.svg')
+COLORS=['black', 'green', 'blue', 'red', 'yellow', 'cyan', 'orange']
 
 # TODO(rh): Uppercase members
 class GameState(Enum):
@@ -82,6 +83,7 @@ class Game:
     def __init__(self, name):
         self.sessions = set()
         self.users = set()
+        self.user_colors = dict()
         self.leader = None
         self.current_user = None
         self.user_round_iterator = None
@@ -108,8 +110,19 @@ class Game:
     async def addUser(self, user):
         # user can only join if in lobby state, or already in list!
         if (self.state == GameState.lobby):
+            available_color = None
+            for color in COLORS:
+                if not color in self.user_colors:
+                    available_color = color
+                    break
+
+            if available_color == None:
+                print("WARN: No color available for user")
+                return False
+
+            self.user_colors[available_color] = user
             # send message to all existing users
-            await self.sendMessage({'type':'UserJoinedMessage','user':user.name})
+            await self.sendMessage({'type':'UserJoinedMessage','user':{'name':user.name,'color':user.color}})
             self.users.add(user)
             return True
         elif (user in self.users):
@@ -136,12 +149,12 @@ class Game:
         # add session
         self.sessions.add(new_session)
         # send list of names to all users!
-        list_of_user_names = []
+        list_of_users = []
         for user in self.users:
-            list_of_user_names.append(user.name)
-        await new_session.sendMessage({'type':'ListOfUsersMessage','users':list_of_user_names})
+            list_of_users.append({'name':user.name,'color':user.color})
+        await new_session.sendMessage({'type':'ListOfUsersMessage','users':list_of_users})
         await self.checkLeader()
-        await new_session.sendMessage({'type': 'GameInformationMessage', 'state': self.state.value, 'leader': self.leader.name, 'you': new_session.user.name})
+        await new_session.sendMessage({'type': 'GameInformationMessage', 'state': self.state.value, 'leader': self.leader.name, 'you': {'name':new_session.user.name,'color': new_session.user.color}})
 
         if (self.current_user != None) and (self.current_user == user):
             print("Send move message after login")

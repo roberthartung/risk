@@ -3,6 +3,8 @@ library risk.user;
 class User {
   final String name;
 
+  String color = 'black';
+
   static Map<String, User> _users = new Map<String, User>();
 
   factory User(name) {

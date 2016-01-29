@@ -45,16 +45,6 @@ button[hidden] {
     display: none;
 }
 
-.user-color {
-    width: 20px;
-}
-
-.user-color span {
-    display: inline-block;
-    width: 15px;
-    height: 15px;
-}
-
 .country:hover circle {
     filter: url(#inset-shadow);
 }

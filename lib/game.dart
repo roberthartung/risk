@@ -64,8 +64,8 @@ class Game extends Observable {
       } else if(m is UserQuitMessage) {
         _userLeftController.add(new User(m.user));
       } else if(m is ListOfUsersMessage) {
-        m.users.forEach((String name) {
-          _userJoinedController.add(new User(name));
+        m.users.forEach((User user) {
+          _userJoinedController.add(user);
         });
         //print('List of users: ${m.users}');
       } else if(m is GameInformationMessage) {
