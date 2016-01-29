@@ -106,7 +106,7 @@ class GameUi extends PolymerElement {
 
     ButtonElement finishMoveButton = $['game-move-finish'];
     game.onNextMove.listen((MoveType move) {
-      /// TODO(rh): ...
+      /// Initialle: Button is disabled
       finishMoveButton.attributes['disabled'] = 'disabled';
       print('Next move: $move');
       switch(move) {
@@ -130,6 +130,7 @@ class GameUi extends PolymerElement {
             waitForSelection.cancel();
             waitForDeselection.cancel();
             game.server.send(new ConquerMoveFinishedMessage(countryToConquer));
+            finishMoveButton.attributes['disabled'] = 'disabled';
           });
           break;
         case MoveType.REINFORCE :
@@ -152,6 +153,7 @@ class GameUi extends PolymerElement {
             waitForSelection.cancel();
             waitForDeselection.cancel();
             game.server.send(new ReinforceMoveFinishedMessage(countryToReinforce));
+            finishMoveButton.attributes['disabled'] = 'disabled';
           });
           break;
       }

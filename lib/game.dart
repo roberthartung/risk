@@ -58,18 +58,17 @@ class Game extends Observable {
 
   void _setupServer() {
     _server.onMessage.listen((Message m) {
-      print('$m');
       if(m is UserJoinedMessage) {
-        _userJoinedController.add(new User(m.user));
+        _userJoinedController.add(m.user);
       } else if(m is UserQuitMessage) {
-        _userLeftController.add(new User(m.user));
+        _userLeftController.add(m.user);
       } else if(m is ListOfUsersMessage) {
         m.users.forEach((User user) {
           _userJoinedController.add(user);
         });
         //print('List of users: ${m.users}');
       } else if(m is GameInformationMessage) {
-        localUser = new User(m.me);
+        localUser = m.me;
         _leaderChangedController.add(new User(m.leader));
         state = m.state;
         _gameStateChangedController.add(m.state);
@@ -85,6 +84,8 @@ class Game extends Observable {
       } else if(m is CountryConqueredMessage) {
         m.country.user = m.user;
         m.country.armySize = 1;
+        m.country.element.classes.add('conquered');
+        m.country.element.querySelector('circle').style.setProperty('fill', m.user.color);
         //game.renderer.requestRender();
       } else if(m is CountryReinforcedMessage) {
         m.country.armySize++;

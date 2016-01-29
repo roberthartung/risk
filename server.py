@@ -112,7 +112,7 @@ class Game:
         if (self.state == GameState.lobby):
             available_color = None
             for color in COLORS:
-                if not color in self.user_colors:
+                if not color in self.user_colors.values():
                     available_color = color
                     break
 
@@ -120,9 +120,9 @@ class Game:
                 print("WARN: No color available for user")
                 return False
 
-            self.user_colors[available_color] = user
+            self.user_colors[user] = available_color
             # send message to all existing users
-            await self.sendMessage({'type':'UserJoinedMessage','user':{'name':user.name,'color':user.color}})
+            await self.sendMessage({'type':'UserJoinedMessage','user':{'name':user.name,'color':available_color}})
             self.users.add(user)
             return True
         elif (user in self.users):
@@ -136,7 +136,8 @@ class Game:
             return False
         # Remove user first, so the message gets only send to the remaining users
         self.users.remove(user)
-        await self.sendMessage({'type':'UserQuitMessage','user':user.name})
+        del self.user_colors[user]
+        await self.sendMessage({'type':'UserQuitMessage','user':{'name':user.name}})
         if(user == self.leader):
             self.leader = None
             await self.checkLeader()
@@ -145,16 +146,16 @@ class Game:
     # ...
     async def addSession(self, new_session):
         # send message to all existing user before
-        await self.sendMessage({'type':'UserOnlineMessage','user':new_session.user.name})
+        await self.sendMessage({'type':'UserOnlineMessage','user':{'name':new_session.user.name}})
         # add session
         self.sessions.add(new_session)
         # send list of names to all users!
         list_of_users = []
         for user in self.users:
-            list_of_users.append({'name':user.name,'color':user.color})
+            list_of_users.append({'name':user.name,'color':self.user_colors[user]})
         await new_session.sendMessage({'type':'ListOfUsersMessage','users':list_of_users})
         await self.checkLeader()
-        await new_session.sendMessage({'type': 'GameInformationMessage', 'state': self.state.value, 'leader': self.leader.name, 'you': {'name':new_session.user.name,'color': new_session.user.color}})
+        await new_session.sendMessage({'type': 'GameInformationMessage', 'state': self.state.value, 'leader': self.leader.name, 'user': {'name':new_session.user.name,'color': self.user_colors[new_session.user]}})
 
         if (self.current_user != None) and (self.current_user == user):
             print("Send move message after login")
@@ -164,14 +165,14 @@ class Game:
             print("In preparation phase...")
             countries = {}
             for country_id, country in self.world.countries.items():
-                countries[country_id] = {'user': None if country.user == None else country.user.name,'army': 0}
+                countries[country_id] = {'user': None if country.user == None else country.user.name, 'army': 0}
             msg = {'type':'CountriesListMessage','countries':countries}
             await new_session.sendMessage(msg)
 
     # ...
     async def removeSession(self, session):
         self.sessions.remove(session)
-        await self.sendMessage({'type':'UserOfflineMessage', 'user':session.user.name})
+        await self.sendMessage({'type':'UserOfflineMessage', 'user': {'name':session.user.name}})
         # try to remove user (only when in game lobby)
         await self.removeUser(session.user)
 
@@ -227,7 +228,7 @@ class Game:
             country = self.available_countries[country_id]
             country.user = session.user
             del self.available_countries[country_id]
-            await self.sendMessage({'type':'CountryConqueredMessage', 'country': country_id, 'user': session.user.name})
+            await self.sendMessage({'type':'CountryConqueredMessage', 'country': country_id, 'user': {'name':session.user.name}})
         else:
             print("Country is not available for conquer?!")
 

@@ -7,7 +7,7 @@ class User {
 
   static Map<String, User> _users = new Map<String, User>();
 
-  factory User(name) {
+  factory User(String name) {
     if (_users.containsKey(name)) {
       return _users[name];
     } else {

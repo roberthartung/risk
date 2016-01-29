@@ -60,8 +60,10 @@ class LoginMessage extends Message {
 class GameInformationMessage extends Message {
   final GameState state;
   final String leader;
-  final String me;
-  GameInformationMessage.fromObject(obj) : super.fromObject(obj), this.state = GameState.values[obj['state']], this.me = obj['you'], this.leader = obj['leader'];
+  final User me;
+  GameInformationMessage.fromObject(obj) : super.fromObject(obj), this.state = GameState.values[obj['state']], this.me = new User(obj['user']['name']), this.leader = obj['leader'] {
+    this.me.color = obj['user']['color'];
+  }
 }
 
 class ListOfUsersMessage extends Message {
@@ -80,15 +82,18 @@ class ListOfUsersMessage extends Message {
 }
 
 class UserMessage extends Message {
-  final String user;
-  final String color;
-  UserMessage(this.user, [this.color = null]);
+  final User user;
+  UserMessage(this.user);
 
-  UserMessage.fromObject(Map obj) : super.fromObject(obj), this.user = obj['user'], this.color = obj.containsKey('color') ? obj['color'] : null;
+  UserMessage.fromObject(Map obj) : super.fromObject(obj), this.user = new User(obj['user']['name']) {
+    if(obj['user'].containsKey('color')) {
+      user.color = obj['user']['color'];
+    }
+  }
 
   Map toObject() {
     Map obj = super.toObject();
-    obj['user'] = {'name': user, 'color': color};
+    obj['user'] = {'name': user.name, 'color': user.color};
     return obj;
   }
 }
@@ -138,12 +143,12 @@ class ReinforceMoveFinishedMessage extends CountryMessage {
 
 class CountryConqueredMessage extends CountryMessage {
   final User user;
-  CountryConqueredMessage.fromObject(obj) : super.fromObject(obj), this.user = new User(obj['user']);
+  CountryConqueredMessage.fromObject(obj) : super.fromObject(obj), this.user = new User(obj['user']['name']);
 }
 
 class CountryReinforcedMessage extends CountryMessage {
   final User user;
-  CountryReinforcedMessage.fromObject(obj) : super.fromObject(obj), this.user = new User(obj['user']);
+  CountryReinforcedMessage.fromObject(obj) : super.fromObject(obj), this.user = new User(obj['user']['name']);
 }
 
 class CountriesListMessage extends Message {
@@ -152,7 +157,7 @@ class CountriesListMessage extends Message {
     countries.forEach((String id, Map data) {
       Country country = new Country(id);
       if(data['user'] != null) {
-        country.user = new User(data['user']);
+        country.user = new User(data['user']['name']);
       }
       country.armySize = data['army'];
     });

@@ -61,8 +61,8 @@ class Country {
     if(circle != null) {
       //circle.attributes['fill'] = 'green';
       //circle.style['fill'] = 'green';
-      Random r = new Random();
-      circle.style.setProperty('fill', 'rgb(${r.nextInt(255)},${r.nextInt(255)},${r.nextInt(255)})');
+      //Random r = new Random();
+      //circle.style.setProperty('fill', 'rgb(${r.nextInt(255)},${r.nextInt(255)},${r.nextInt(255)})');
     }
   }
 

@@ -13,6 +13,14 @@
             svg .country:hover path, svg .country.selected path {
                 fill: red !important;
             }
+
+            svg .country circle {
+                display: none !important;
+            }
+
+            svg .country.conquered circle {
+                display: inline !important;
+            }
         </style>
         <template if="{{lobby}}">
             <style type="text/css">
