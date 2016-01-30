@@ -12,6 +12,7 @@ abstract class InputDevice {
   Stream<Country> get onCountryDeselected;
   Stream<Country> get onCountryMouseOver;
   Stream<Country> get onCountryMouseOut;
+  Stream<Country> get onCountryDoubleClicked;
 
   void attach(Element container);
 }
@@ -31,32 +32,47 @@ class MouseInputDevice extends InputDevice {
   StreamController<Country> _countryMouseOutController = new StreamController.broadcast();
   Stream<Country> get onCountryMouseOut => _countryMouseOutController.stream;
 
+  StreamController<Country> _countryDoubleClickedController = new StreamController.broadcast();
+  Stream<Country> get onCountryDoubleClicked => _countryDoubleClickedController.stream;
+
   Country selectedCountry = null;
 
   MouseInputDevice() {
 
   }
 
-  void attach(Element container) {
-    container.onClick.listen((MouseEvent ev) {
-      if(ev.target is PathElement) {
-        PathElement path = ev.target;
-        if(path.classes.contains('countrypart')) {
-          GElement countryElement = path.parent;
-          Country country = Country.countries[countryElement.id];
-          if(country == null) {
-            throw "Click on unknown country";
-          }
-
-          if(selectedCountry != null) {
-            _countryDeselectedController.add(selectedCountry);
-          }
-
-          selectedCountry = country;
-          _countrySelectedController.add(selectedCountry);
+  Country getCountryFromEvent(MouseEvent ev) {
+    if(ev.target is PathElement) {
+      PathElement path = ev.target;
+      if (path.classes.contains('countrypart')) {
+        GElement countryElement = path.parent;
+        Country country = Country.countries[countryElement.id];
+        if (country == null) {
+          throw "Click on unknown country";
         }
+        return country;
+      }
+    }
+    return null;
+  }
+
+  void attach(Element container) {
+    container.onDoubleClick.listen((MouseEvent ev) {
+      if(selectedCountry != null) {
+        _countryDoubleClickedController.add(selectedCountry);
+      }
+    });
+
+    container.onClick.listen((MouseEvent ev) {
+      Country country = getCountryFromEvent(ev);
+      if(country != null) {
+        if(selectedCountry != null) {
+          _countryDeselectedController.add(selectedCountry);
+        }
+
+        selectedCountry = country;
+        _countrySelectedController.add(selectedCountry);
       } else if(selectedCountry != null) {
-        //print('Click to unknown target: ${ev.target}');
         _countryDeselectedController.add(selectedCountry);
         selectedCountry = null;
       }

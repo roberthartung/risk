@@ -9,9 +9,10 @@ from enum import Enum
 import gamemap
 import sys
 import copy
+import random
 
 mapinfo = gamemap.MapInfo('web/map.svg')
-COLORS=['black', 'green', 'blue', 'red', 'yellow', 'cyan', 'orange']
+COLORS=['black', 'green', 'yellow', 'red', 'blue', 'cyan', 'orange']
 
 # TODO(rh): Uppercase members
 class GameState(Enum):
@@ -62,7 +63,7 @@ class User:
 
     async def createSession(self, game, ws):
         session = Session(self, game, ws)
-        print(str(self) + " createSession")
+        # print(str(self) + " createSession")
         self.sessions.add(session)
         await game.addSession(session)
         return session
@@ -157,17 +158,15 @@ class Game:
         await self.checkLeader()
         await new_session.sendMessage({'type': 'GameInformationMessage', 'state': self.state.value, 'leader': self.leader.name, 'user': {'name':new_session.user.name,'color': self.user_colors[new_session.user]}})
 
-        if (self.current_user != None) and (self.current_user == user):
+        if (self.current_user != None) and (self.current_user == new_session.user):
             print("Send move message after login")
             await self.sendMoveMessage()
 
-        # TODO(rh) Sending countries this early could be a problem, as the world
-        # might not be loaded on the client side
         if self.state == GameState.preparation:
-            print("In preparation phase...")
+            # print("In preparation phase... Next User: " + str(self.current_user))
             countries = {}
             for country_id, country in self.world.countries.items():
-                countries[country_id] = {'user': None if country.user == None else country.user.name, 'army': 0}
+                countries[country_id] = {'user': None if country.user == None else {'name':country.user.name}, 'army': 0}
             msg = {'type':'CountriesListMessage','countries':countries}
             await new_session.sendMessage(msg)
 
@@ -178,10 +177,10 @@ class Game:
         # try to remove user (only when in game lobby)
         await self.removeUser(session.user)
 
-    async def start(self):
+    async def start(self, conquer_random):
         if (self.state != GameState.lobby):
             return False
-        await self.startPreparation()
+        await self.startPreparation(conquer_random)
         return True
 
     async def changeState(self, newState):
@@ -190,13 +189,24 @@ class Game:
 
     # Enter preparation state. In this state, there are two phases:
     # - Players can conquer countries, until there are all conquered!
-    async def startPreparation(self):
-        self.preparation_phase = PreparationPhase.CONQUER
-        await self.changeState(GameState.preparation)
-        await self.roundStep()
+    async def startPreparation(self, conquer_random):
         # copy only list, but not references!
-        self.available_countries = copy.copy(self.world.countries)
-        # print(self.available_countries)
+
+        await self.changeState(GameState.preparation)
+        if conquer_random:
+            self.preparation_phase = PreparationPhase.REINFORCE
+
+            countries = list(self.world.countries.values())
+            random.shuffle(countries)
+            for country in countries:
+                user = self.determineNextUser()
+                country.conquer(user)
+                # TODO(rh): Send message of all countries here
+                await self.sendMessage({'type':'CountryConqueredMessage', 'country': country.id, 'user': {'name':user.name}})
+        else:
+            self.preparation_phase = PreparationPhase.CONQUER
+            self.available_countries = copy.copy(self.world.countries)
+        await self.roundStep()
 
     async def sendMoveMessage(self):
         if (self.state == GameState.preparation):
@@ -208,27 +218,47 @@ class Game:
             for session in self.current_user.sessions:
                 await session.sendMessage(message)
 
-    async def roundStep(self):
+    def determineNextUser(self):
         if (self.user_round_iterator == None):
             self.user_round_iterator = iter(self.users)
 
-        # self.current_user = None
         try:
             self.current_user = next(self.user_round_iterator)
         except StopIteration:
             self.user_round_iterator = iter(self.users)
             self.current_user = next(self.user_round_iterator)
-            pass
 
+        return self.current_user
+
+    async def roundStep(self):
+        self.determineNextUser()
         print("roundStep: " + str(self.current_user))
-
         await self.sendMoveMessage()
+
+    async def reinforceCountry(self, session, country_id):
+        if not country_id in self.world.countries:
+            print("ERROR,Reinforce: Country not found")
+            return None
+        country = self.world.countries[country_id]
+
+        # 1. Check if session belongs to user
+        if not session.user == country.user:
+            print("ERROR,Reinforce: User not matching")
+            return None
+        # 2. Check if user has army to reinforce
+        # TODO(rh)
+        # 3. Reinforce Country locally
+        country.reinforce()
+        # 4. Send message to all users
+        await self.sendMessage({'type':'CountryReinforcedMessage', 'country': country_id})
+        # 5. Make step
+        await session.game.roundStep()
 
     async def conquerCountry(self, session, country_id):
         if country_id in self.available_countries:
             print("Country is available for conquering!")
             country = self.available_countries[country_id]
-            country.user = session.user
+            country.conquer(session.user)
             del self.available_countries[country_id]
             await self.sendMessage({'type':'CountryConqueredMessage', 'country': country_id, 'user': {'name':session.user.name}})
         else:
@@ -236,6 +266,7 @@ class Game:
 
         if len(self.available_countries) == 0:
             self.preparation_phase = PreparationPhase.REINFORCE
+            # force new iterator here!
             self.user_round_iterator = None
 
         await session.game.roundStep()
@@ -288,13 +319,16 @@ async def handler(websocket, path):
                         print("Unable to add user to game!")
             elif (frame_type == 'StartGameMessage'):
                 if(session != None):
-                    await session.game.start()
+                    await session.game.start(obj['random'])
             #elif (frame_type == 'MoveFinishedMessage'):
             #    if(session != None):
             #        await session.game.roundStep()
             elif (frame_type == 'ConquerMoveFinishedMessage'):
-                if(session != None):
+                if (session != None):
                     await session.game.conquerCountry(session, obj['country'])
+            elif (frame_type == 'ReinforceMoveFinishedMessage'):
+                if (session != None):
+                    await session.game.reinforceCountry(session, obj['country'])
             else:
                 print("Unknown message received: " + str(obj))
         except websockets.exceptions.ConnectionClosed:

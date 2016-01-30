@@ -2,6 +2,7 @@ library risk.game;
 
 
 import 'dart:async';
+import 'dart:collection';
 import 'user.dart';
 import 'package:observe/observe.dart';
 
@@ -37,9 +38,11 @@ class Game extends Observable {
   final StreamController<MoveType> _nextMoveController = new StreamController.broadcast();
   Stream<MoveType> get onNextMove => _nextMoveController.stream;
 
+  Queue<Message> _messageQueue = new Queue();
+
   //GameRenderer _renderer;
   //GameRenderer get renderer => _renderer;
-  World world;
+  World _world;
   ServerConnection _server;
   ServerConnection get server => _server;
   @observable User leader;
@@ -54,6 +57,24 @@ class Game extends Observable {
 
   void login(String user, String pass, String game) {
     _server.send(new LoginMessage(user, pass, game));
+  }
+
+  void setWorld(World world) {
+    _world = world;
+    print('Game: World loaded, ${_messageQueue.length}');
+    _messageQueue.forEach((Message m) {
+      if(m is CountriesListMessage) {
+        print('$m');
+        Country.countries.forEach((String id, Country country) {
+          if(country.user != null) {
+            country.conquer(country.user);
+          }
+        });
+      } else if(m is CountryConqueredMessage) {
+        m.country.conquer(m.user);
+      }
+    });
+    _messageQueue.clear();
   }
 
   void _setupServer() {
@@ -82,20 +103,22 @@ class Game extends Observable {
           _nextMoveController.add(MoveType.REINFORCE);
         }
       } else if(m is CountryConqueredMessage) {
-        m.country.user = m.user;
-        m.country.armySize = 1;
-        m.country.element.classes.add('conquered');
-        m.country.element.querySelector('circle').style.setProperty('fill', m.user.color);
-        //game.renderer.requestRender();
+        if(_world == null) {
+          _messageQueue.add(m);
+        } else {
+          m.country.conquer(m.user);
+        }
       } else if(m is CountryReinforcedMessage) {
         m.country.armySize++;
-        //game.renderer.requestRender();
       } else if(m is LeaderChangedMessage) {
         _leaderChangedController.add(new User(m.leader));
       } else if(m is CountriesListMessage) {
-        /// TODO(rh): Update countries?
-        print('List: $m');
-        print(m.countries);
+        /// Fake conquer if we get the initial list and the country already has
+        /// an assigned user!
+        if(_world == null) {
+          _messageQueue.add(m);
+        }
+        // print(_world);
       }
     });
 

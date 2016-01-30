@@ -89,6 +89,18 @@ class Country {
     return c;
   }
 
+  void conquer(User user) {
+    this.user = user;
+    this.armySize = 1;
+    this.element
+      ..classes.add('conquered')
+      ..querySelector('circle').style.setProperty('fill', user.color);
+  }
+
+  void reinforce([int amount = 1]) {
+    this.armySize += amount;
+  }
+
   /// String representation: name of the country
   toString() => name;
 }

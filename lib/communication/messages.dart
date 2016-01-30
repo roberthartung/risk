@@ -17,7 +17,15 @@ class Message {
 }
 
 class StartGameMessage extends Message {
-  StartGameMessage() : super();
+  bool random;
+
+  StartGameMessage(this.random) : super();
+
+  Map toObject() {
+    Map obj = super.toObject();
+    obj['random'] = random;
+    return obj;
+  }
 }
 
 class NextMoveMessage extends Message {
@@ -147,8 +155,7 @@ class CountryConqueredMessage extends CountryMessage {
 }
 
 class CountryReinforcedMessage extends CountryMessage {
-  final User user;
-  CountryReinforcedMessage.fromObject(obj) : super.fromObject(obj), this.user = new User(obj['user']['name']);
+  CountryReinforcedMessage.fromObject(obj) : super.fromObject(obj);
 }
 
 class CountriesListMessage extends Message {

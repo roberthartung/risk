@@ -31,15 +31,13 @@ class GameMap extends PolymerElement {
   void attach(InputDevice inputDevice) {
     inputDevice.attach($['container']);
     inputDevice.onCountrySelected.listen((Country country) {
-      print('selected');
       country.element.classes.add('selected');
     });
 
     inputDevice.onCountryDeselected.listen((Country country) {
-      print('deselected');
       country.element.classes.remove('selected');
     });
-
+    /*
     inputDevice.onCountryMouseOver.listen((Country country) {
       //print('Country over: $country');
       //renderer.requestRender();
@@ -49,5 +47,6 @@ class GameMap extends PolymerElement {
       //print('Country out: $country');
       //renderer.requestRender();
     });
+    */
   }
 }

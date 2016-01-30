@@ -28,7 +28,14 @@ class Country:
         self.id = i
         self.title = title
         self.user = None
+        self.army = 0
         self.connected = set()
+
+    def conquer(self, user):
+        self.user = user
+
+    def reinforce(self):
+        self.army += 1
 
     def __str__(self):
         return self.title

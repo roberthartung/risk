@@ -69,7 +69,7 @@ class GameUi extends PolymerElement {
     StreamSubscription sub;
     sub = ($['lobby-start'] as ButtonElement).onClick.listen((MouseEvent ev) {
       if(game.localUser == game.leader) {
-        game.server.send(new StartGameMessage());
+        game.server.send(new StartGameMessage(($['lobby-random-conquering'] as CheckboxInputElement).checked));
       } else {
         throw "Request to start for non-leader.";
       }
@@ -110,14 +110,27 @@ class GameUi extends PolymerElement {
       print('Next move: $move');
       switch(move) {
         case MoveType.CONQUER :
+
           Country countryToConquer;
           StreamSubscription waitForSelection;
           StreamSubscription waitForDeselection;
+          StreamSubscription waitForDblClick;
+          StreamSubscription waitForButtonClick;
+
           waitForSelection = _inputDevice.onCountrySelected.listen((Country country) {
-            print('selected...');
             if(country.user == null) {
               countryToConquer = country;
               finishMoveButton.attributes.remove('disabled');
+            }
+          });
+
+          waitForDblClick = _inputDevice.onCountryDoubleClicked.listen((Country country) {
+            if(country.user == null) {
+              waitForSelection.cancel();
+              waitForDeselection.cancel();
+              waitForDblClick.cancel();
+              waitForButtonClick.cancel();
+              game.server.send(new ConquerMoveFinishedMessage(country));
             }
           });
 
@@ -125,9 +138,11 @@ class GameUi extends PolymerElement {
             finishMoveButton.attributes['disabled'] = 'disabled';
           });
 
-          finishMoveButton.onClick.first.then((_) {
+          waitForButtonClick = finishMoveButton.onClick.listen((_) {
             waitForSelection.cancel();
             waitForDeselection.cancel();
+            waitForDblClick.cancel();
+            waitForButtonClick.cancel();
             game.server.send(new ConquerMoveFinishedMessage(countryToConquer));
             finishMoveButton.attributes['disabled'] = 'disabled';
           });
@@ -136,11 +151,23 @@ class GameUi extends PolymerElement {
           Country countryToReinforce;
           StreamSubscription waitForSelection;
           StreamSubscription waitForDeselection;
+          StreamSubscription waitForDblClick;
+          StreamSubscription waitForButtonClick;
+
           waitForSelection = _inputDevice.onCountrySelected.listen((Country country) {
-            print('selected...');
             if(country.user == game.localUser) {
               countryToReinforce = country;
               finishMoveButton.attributes.remove('disabled');
+            }
+          });
+
+          waitForDblClick = _inputDevice.onCountryDoubleClicked.listen((Country country) {
+            if(country.user == game.localUser) {
+              waitForSelection.cancel();
+              waitForDeselection.cancel();
+              waitForDblClick.cancel();
+              waitForButtonClick.cancel();
+              game.server.send(new ReinforceMoveFinishedMessage(country));
             }
           });
 
@@ -148,9 +175,11 @@ class GameUi extends PolymerElement {
             finishMoveButton.attributes['disabled'] = 'disabled';
           });
 
-          finishMoveButton.onClick.first.then((_) {
+          waitForButtonClick = finishMoveButton.onClick.listen((_) {
             waitForSelection.cancel();
             waitForDeselection.cancel();
+            waitForDblClick.cancel();
+            waitForButtonClick.cancel();
             game.server.send(new ReinforceMoveFinishedMessage(countryToReinforce));
             finishMoveButton.attributes['disabled'] = 'disabled';
           });
@@ -164,11 +193,12 @@ class GameUi extends PolymerElement {
     $['game'].hidden = false;
     //final NodeValidator gameMapNodeValidator = new NodeValidatorBuilder()..allowElement('game-map', attributes: ['id', 'map']);
     //$['game'].appendHtml('<game-map id="map" map="${map_filename}"></game-map>', validator: gameMapNodeValidator);
-    print('Foo: ${map_filename}');
+    //print('Foo: ${map_filename}');
     map = new Element.tag('game-map');
     map.setAttribute('map', map_filename);
     map.onWorldLoaded.listen((World w) {
       map.attach(_inputDevice);
+      game.setWorld(w);
     });
     $['game'].append(map);
   }

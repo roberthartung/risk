@@ -47,13 +47,13 @@
                 </template>
             </ul>
 
-            Hide: {{game.localUser != game.leader}}
-
             <div hidden?="{{game.localUser != game.leader}}">
                 <h3>Settings</h3>
                 Map: <select id="lobby-map">
                     <option value="map.svg">Default map</option>
                 </select>
+
+                <input type="checkbox" id="lobby-random-conquering" value="1"> <label for="lobby-random-conquering">Randomly conquer countries for all players</label>
 
                 <button id="lobby-start" class="btn btn-primary pull-right">Start game</button>
             </div>
