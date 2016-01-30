@@ -161,6 +161,8 @@ class Game:
             print("Send move message after login")
             await self.sendMoveMessage()
 
+        # TODO(rh) Sending countries this early could be a problem, as the world
+        # might not be loaded on the client side
         if self.state == GameState.preparation:
             print("In preparation phase...")
             countries = {}

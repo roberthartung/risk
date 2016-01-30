@@ -1,6 +1,7 @@
 // Copyright (c) 2016, <your name>. All rights reserved. Use of this source code
 // is governed by a BSD-style license that can be found in the LICENSE file.
 
+/*
 import 'dart:html' ;
 import 'dart:async';
 import 'dart:math' show Rectangle, Point;
@@ -10,6 +11,7 @@ import 'package:risk/communication/server.dart';
 import 'package:risk/communication/messages.dart';
 import 'package:risk/world/world.dart';
 import 'package:risk/user.dart';
+*/
 import 'package:polymer/polymer.dart';
 
 const num MAP_MARGIN = 30;

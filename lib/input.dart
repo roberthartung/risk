@@ -5,7 +5,6 @@ import 'dart:svg' show PathElement, GElement;
 import 'dart:async';
 //import 'dart:math' show Point;
 import 'package:risk/world/world.dart';
-import 'package:risk/game.dart';
 
 // Handle input e.g. hover or click countries!
 abstract class InputDevice {

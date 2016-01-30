@@ -7,7 +7,6 @@ import 'package:polymer/polymer.dart';
 import 'package:risk/game.dart';
 import 'game_map.dart';
 import 'package:risk/world/world.dart';
-import 'package:risk/communication/server.dart';
 import 'package:risk/communication/messages.dart';
 import 'package:risk/input.dart';
 

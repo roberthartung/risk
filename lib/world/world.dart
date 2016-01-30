@@ -39,11 +39,23 @@ class Continent {
 
 class Country {
   final List<CountryPart> parts = new List();
-  final String id;
-  final String name;
-  final String color;
-  final Point middle;
-  final Element element;
+
+  String _id;
+  String get id => _id;
+
+  String _name;
+  String get name => _name;
+
+  String _color;
+  String get color => _color;
+
+  Point _middle;
+  Point get middle => _middle;
+
+  Element _element;
+  Element get element => _element;
+
+  /// Map of id to [Country] instances
   static final Map<String, Country> countries = new Map();
 
   /// User who conquered this country!
@@ -55,23 +67,26 @@ class Country {
   bool isMouseOver = false;
 
   /// Constructor
-  Country._(this.id, this.name, this.color, this.middle, this.element) {
-    countries[id] = this;
-    CircleElement circle = this.element.querySelector('circle');
-    if(circle != null) {
+  Country._(this._id/*, this.name, this.color, this.middle, this.element*/);
+  //{
+    //countries[id] = this;
+    //CircleElement circle = this.element.querySelector('circle');
+    //if(circle != null) {
       //circle.attributes['fill'] = 'green';
       //circle.style['fill'] = 'green';
       //Random r = new Random();
       //circle.style.setProperty('fill', 'rgb(${r.nextInt(255)},${r.nextInt(255)},${r.nextInt(255)})');
-    }
-  }
+    //}
+  //}
 
   factory Country(id) {
     if(countries.containsKey(id)) {
       return countries[id];
     }
 
-    throw "Country not found: $id";
+    Country c = new Country._(id);
+    countries[id] = c;
+    return c;
   }
 
   /// String representation: name of the country
@@ -109,7 +124,12 @@ void loadCountries(World world, GElement countriesElement) {
           parts.add(new CountryPart(path, pathElement));
         }
       });
-      Country country = new Country._(countryId, countryName, color, middle, countryElement);
+      Country country = new Country(countryId);
+      // countryName, color, middle, countryElement
+      country._name = countryName;
+      country._color = color;
+      country._middle = middle;
+      country._element = countryElement;
       country.parts.addAll(parts);
       continent.countries.add(country);
     });
