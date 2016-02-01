@@ -123,11 +123,13 @@ void loadCountries(World world, GElement countriesElement) {
       List<CountryPart> parts = new List();
       String color;
       Point middle;
+      PathElement primaryElement;
       countryElement.children.where((Element e) => e is PathElement).forEach((PathElement pathElement) {
         pathElement.classes.add('countrypart');
         if(pathElement.id == countryElement.id + "-0") {
           Rect bbox = pathElement.getBBox();
           middle = new Point(bbox.x + bbox.width/2, bbox.y + bbox.height/2);
+          primaryElement = pathElement;
         }
         Match match = regexp_stroke.firstMatch(pathElement.getAttribute('style'));
         if(match != null) {
@@ -142,6 +144,20 @@ void loadCountries(World world, GElement countriesElement) {
       country._color = color;
       country._middle = middle;
       country._element = countryElement;
+      /// Query for circle to append sibling <text> element
+      CircleElement circle = country._element.querySelector('circle');
+      TextElement text = new TextElement();
+      text.appendText('0');
+      //if(primaryElement != null) {
+      //var pos = primaryElement.getBBox();
+      text.style.setProperty('fill', '#fff');
+      text.attributes['x'] = circle.attributes['cx'];
+      text.attributes['y'] = circle.attributes['cy'];
+        //text.attributes['x'] = '${pos.x + pos.width/2}';
+        //text.attributes['y'] = '${pos.y + pos.height/2}';
+      //}
+      circle.parent.append(text);
+      //circle.insertAdjacentElement('afterend', text);
       country.parts.addAll(parts);
       continent.countries.add(country);
     });

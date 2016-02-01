@@ -31,6 +31,12 @@ class PreparationPhase(Enum):
     # Reinforce
     REINFORCE = 1
 
+class GamePhase(Enum):
+    REINFORCE = 0
+    RELEASE = 1
+    MOVE = 2
+    DRAW_CARD = 3
+
 games = {}
 users = {}
 
@@ -76,19 +82,16 @@ class User:
         return "<User: "+self.name+">"
 
 class Game:
-    #state = GameState.lobby
-    #sessions = set()
-    #users = set()
-    #leader = None
-    #user_round_iterator = None
     def __init__(self, name):
         self.sessions = set()
         self.users = set()
         self.user_colors = dict()
+        self.user_remaining = dict()
         self.leader = None
         self.current_user = None
         self.user_round_iterator = None
         self.state = GameState.lobby
+        self.game_phase = None
         self.name = name
         self.preparation_phase = None
         self.world = copy.deepcopy(mapinfo.world)
@@ -187,6 +190,15 @@ class Game:
         self.state = newState
         await self.sendMessage({'type': 'GameStateChangedMessage', 'state': self.state.value})
 
+    def startReinforce(self):
+        self.preparation_phase = PreparationPhase.REINFORCE
+        # force new iterator here!
+        self.user_round_iterator = None
+        number_of_soldiers = 5 #2 * len(self.world.countries) / len(self.users)
+        print("Switching to REINFORCE phase, #" + str(number_of_soldiers))
+        for user in self.users:
+            self.addRemainingArmy(user, number_of_soldiers)
+
     # Enter preparation state. In this state, there are two phases:
     # - Players can conquer countries, until there are all conquered!
     async def startPreparation(self, conquer_random):
@@ -194,8 +206,6 @@ class Game:
 
         await self.changeState(GameState.preparation)
         if conquer_random:
-            self.preparation_phase = PreparationPhase.REINFORCE
-
             countries = list(self.world.countries.values())
             random.shuffle(countries)
             for country in countries:
@@ -203,9 +213,11 @@ class Game:
                 country.conquer(user)
                 # TODO(rh): Send message of all countries here
                 await self.sendMessage({'type':'CountryConqueredMessage', 'country': country.id, 'user': {'name':user.name}})
+            self.startReinforce()
         else:
             self.preparation_phase = PreparationPhase.CONQUER
             self.available_countries = copy.copy(self.world.countries)
+
         await self.roundStep()
 
     async def sendMoveMessage(self):
@@ -217,6 +229,11 @@ class Game:
 
             for session in self.current_user.sessions:
                 await session.sendMessage(message)
+        elif self.state == GameState.started:
+            if self.game_phase == None:
+                self.game_phase = GamePhase.REINFORCE
+                # TODO(rh): Can we use the same message here?
+                message = {'type':'ReinforceMoveMessage'}
 
     def determineNextUser(self):
         if (self.user_round_iterator == None):
@@ -232,6 +249,14 @@ class Game:
 
     async def roundStep(self):
         self.determineNextUser()
+
+        if (self.state == GameState.preparation) and (self.preparation_phase == PreparationPhase.REINFORCE) and (self.user_remaining[self.current_user] == 0):
+            print("Reinforcing DONE -> Chaning state to 'started'")
+            self.preparation_phase = None
+            self.user_round_iterator = None
+            self.game_phase = None
+            await self.changeState(GameState.started)
+
         print("roundStep: " + str(self.current_user))
         await self.sendMoveMessage()
 
@@ -246,7 +271,10 @@ class Game:
             print("ERROR,Reinforce: User not matching")
             return None
         # 2. Check if user has army to reinforce
-        # TODO(rh)
+        if self.user_remaining[session.user] <= 0:
+            print("ERROR,Reinforce: No army left to reinforce!")
+            return None
+        self.user_remaining[session.user] -= 1
         # 3. Reinforce Country locally
         country.reinforce()
         # 4. Send message to all users
@@ -265,11 +293,15 @@ class Game:
             print("Country is not available for conquer?!")
 
         if len(self.available_countries) == 0:
-            self.preparation_phase = PreparationPhase.REINFORCE
-            # force new iterator here!
-            self.user_round_iterator = None
+            self.startReinforce()
 
         await session.game.roundStep()
+
+    def addRemainingArmy(self, user, amount):
+        if user in self.user_remaining:
+            self.user_remaining[user] += amount
+        else:
+            self.user_remaining[user] = amount
 
     def __str__(self):
         return "<Game: "+self.name+">"

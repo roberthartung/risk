@@ -13,6 +13,6 @@ dependencies:
   polymer: ">=0.16.0 <0.17.0"
 
 transformers:
-- dart_to_js_script_rewriter
 - polymer:
     entry_points: web/index.html
+- dart_to_js_script_rewriter
