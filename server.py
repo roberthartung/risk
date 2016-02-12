@@ -33,8 +33,8 @@ class PreparationPhase(Enum):
 
 class GamePhase(Enum):
     REINFORCE = 0
-    RELEASE = 1
-    MOVE = 2
+    ATTACK = 1
+    MOVE_ARMY = 2
     DRAW_CARD = 3
 
 games = {}
@@ -194,7 +194,7 @@ class Game:
         self.preparation_phase = PreparationPhase.REINFORCE
         # force new iterator here!
         self.user_round_iterator = None
-        number_of_soldiers = 5 #2 * len(self.world.countries) / len(self.users)
+        number_of_soldiers = 2 * len(self.world.countries) / len(self.users) # 5 #
         print("Switching to REINFORCE phase, #" + str(number_of_soldiers))
         for user in self.users:
             self.addRemainingArmy(user, number_of_soldiers)
@@ -208,10 +208,10 @@ class Game:
         if conquer_random:
             countries = list(self.world.countries.values())
             random.shuffle(countries)
+            # TODO(rh): Send message with all countries, instead of a single message!
             for country in countries:
                 user = self.determineNextUser()
                 country.conquer(user)
-                # TODO(rh): Send message of all countries here
                 await self.sendMessage({'type':'CountryConqueredMessage', 'country': country.id, 'user': {'name':user.name}})
             self.startReinforce()
         else:
@@ -230,10 +230,22 @@ class Game:
             for session in self.current_user.sessions:
                 await session.sendMessage(message)
         elif self.state == GameState.started:
+            # Check old state and determine next state!
             if self.game_phase == None:
                 self.game_phase = GamePhase.REINFORCE
                 # TODO(rh): Can we use the same message here?
                 message = {'type':'ReinforceMoveMessage'}
+            elif self.game_phase == GamePhase.REINFORCE:
+                self.game_phase = GamePhase.ATTACK
+                pass
+            elif self.game_phase == GamePhase.ATTACK:
+                self.game_phase = GamePhase.MOVE_ARMY
+            elif self.game_phase == GamePhase.MOVE_ARMY:
+
+            elif self.game_phase == GamePhase.DRAW_CARD:
+                # next user?
+                pass
+
 
     def determineNextUser(self):
         if (self.user_round_iterator == None):
@@ -247,6 +259,7 @@ class Game:
 
         return self.current_user
 
+    # Make the next roundstep!
     async def roundStep(self):
         self.determineNextUser()
 
@@ -280,7 +293,8 @@ class Game:
         # 4. Send message to all users
         await self.sendMessage({'type':'CountryReinforcedMessage', 'country': country_id})
         # 5. Make step
-        await session.game.roundStep()
+        # WAS: session.game
+        await self.roundStep()
 
     async def conquerCountry(self, session, country_id):
         if country_id in self.available_countries:

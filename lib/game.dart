@@ -109,7 +109,9 @@ class Game extends Observable {
           m.country.conquer(m.user);
         }
       } else if(m is CountryReinforcedMessage) {
-        m.country.armySize++;
+        //print(m);
+        m.country.reinforce();
+        //m.country.armySize++;
       } else if(m is LeaderChangedMessage) {
         _leaderChangedController.add(new User(m.leader));
       } else if(m is CountriesListMessage) {

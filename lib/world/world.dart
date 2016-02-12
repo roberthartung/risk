@@ -55,6 +55,8 @@ class Country {
   Element _element;
   Element get element => _element;
 
+  Element _text;
+
   /// Map of id to [Country] instances
   static final Map<String, Country> countries = new Map();
 
@@ -95,10 +97,22 @@ class Country {
     this.element
       ..classes.add('conquered')
       ..querySelector('circle').style.setProperty('fill', user.color);
+    updateArmySize();
   }
 
   void reinforce([int amount = 1]) {
     this.armySize += amount;
+    updateArmySize();
+  }
+
+  void setElement(Element e) {
+    _element = e;
+    _text = e.querySelector('text');
+    updateArmySize();
+  }
+
+  void updateArmySize() {
+    _text.text = '$armySize';
   }
 
   /// String representation: name of the country
@@ -143,20 +157,20 @@ void loadCountries(World world, GElement countriesElement) {
       country._name = countryName;
       country._color = color;
       country._middle = middle;
-      country._element = countryElement;
+      country.setElement(countryElement);
       /// Query for circle to append sibling <text> element
-      CircleElement circle = country._element.querySelector('circle');
-      TextElement text = new TextElement();
-      text.appendText('0');
+      //CircleElement circle = country._element.querySelector('circle');
+      //TextElement text = new TextElement();
+      //text.appendText('0');
       //if(primaryElement != null) {
       //var pos = primaryElement.getBBox();
-      text.style.setProperty('fill', '#fff');
-      text.attributes['x'] = circle.attributes['cx'];
-      text.attributes['y'] = circle.attributes['cy'];
-        //text.attributes['x'] = '${pos.x + pos.width/2}';
-        //text.attributes['y'] = '${pos.y + pos.height/2}';
+      //text.style.setProperty('fill', '#fff');
+      //text.attributes['x'] = circle.attributes['cx'];
+      //text.attributes['y'] = circle.attributes['cy'];
+      // text.attributes['x'] = '${pos.x + pos.width/2}';
+      //text.attributes['y'] = '${pos.y + pos.height/2}';
       //}
-      circle.parent.append(text);
+      //circle.parent.append(text);
       //circle.insertAdjacentElement('afterend', text);
       country.parts.addAll(parts);
       continent.countries.add(country);
