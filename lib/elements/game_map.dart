@@ -18,6 +18,7 @@ class GameMap extends PolymerElement {
 
   void attached() {
     print('Loading world');
+    // $['container']
     loadWorld($['container'], map).then((World world) => _worldLoaded(world));
   }
 

@@ -74,6 +74,9 @@
            id="feMergeNode4157" />
       </feMerge>
     </filter>
+    <marker id="markerArrow" markerWidth="13" markerHeight="13" refX="2" refY="6" orient="auto">
+      <path d="M2,2 L2,11 L10,6 L2,2" style="fill: #000000;" />
+    </marker>
   </defs>
   <sodipodi:namedview
      pagecolor="#ffffff"
@@ -2134,4 +2137,5 @@
       </g>
     </g>
   </g>
+  <!--<path d="M100,100 L300,300" style="stroke: black; stroke-width: 2px; fill: none; marker-end: url(#markerArrow);"/>-->
 </svg>

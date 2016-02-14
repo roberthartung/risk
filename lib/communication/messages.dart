@@ -3,7 +3,7 @@ import 'package:risk/world/world.dart';
 import 'package:risk/user.dart';
 import 'package:risk/game.dart' show GameState;
 
-class Message {
+abstract class Message {
   String get type;
   Message() {
 
@@ -45,6 +45,24 @@ class ConquerMoveMessage extends NextMoveMessage {
 class ReinforceMoveMessage extends NextMoveMessage {
   String get type => 'ReinforceMoveMessage';
   ReinforceMoveMessage.fromObject(obj) : super.fromObject(obj);
+}
+
+class AttackMoveMessage extends NextMoveMessage {
+  String get type => 'AttackMoveMessage';
+
+  AttackMoveMessage.fromObject(obj) : super.fromObject(obj);
+}
+
+class ChooseTroopSizeMessage extends Message {
+  String get type => 'ChooseTroopSizeMessage';
+  final Country country;
+  final bool attacker;
+  final bool defender;
+  ChooseTroopSizeMessage.fromObject(Map obj) :
+        super.fromObject(obj),
+        country = new Country(obj['country']),
+        attacker = obj.containsKey('attacker') && obj['attacker'] == true,
+        defender = obj.containsKey('defender') && obj['defender'] == true;
 }
 
 class MoveFinishedMessage extends Message {
@@ -192,4 +210,71 @@ class CountriesListMessage extends Message {
       country.armySize = data['army'];
     });
   }
+}
+
+class AttackMessage extends Message {
+  String get type => 'AttackMessage';
+  final Country from;
+  final Country to;
+
+  AttackMessage(this.from, this.to);
+
+  Map toObject() {
+    Map obj = super.toObject();
+    obj['from'] = from.id;
+    obj['to'] = to.id;
+    return obj;
+  }
+}
+
+class NextPhaseMessage extends Message {
+  String get type => 'NextPhaseMessage';
+}
+
+class TroopSizeMessage extends Message {
+  String get type => 'TroopSizeMessage';
+  final int size;
+
+  TroopSizeMessage(this.size);
+
+  Map toObject() {
+    Map obj = super.toObject();
+    obj['size'] = size;
+    return obj;
+  }
+}
+
+class FortifyMoveMessage extends Message {
+  String get type => 'FortifyMoveMessage';
+  final Country from;
+  final Country to;
+  final int min;
+  final int max;
+  FortifyMoveMessage.fromObject(obj) : super.fromObject(obj),
+        from = obj['from'] == null ? null : new Country(obj['from']),
+        to = obj['to'] == null ? null : new Country(obj['to']),
+        min = obj['min'],
+        max = obj['max'];
+}
+
+class FortifyMessage extends Message {
+  String get type => 'FortifyMessage';
+  final Country from;
+  final Country to;
+  final int size;
+
+  FortifyMessage(this.from, this.to, this.size);
+
+  Map toObject() {
+    Map obj = super.toObject();
+    obj['from'] = from.id;
+    obj['to'] = to.id;
+    obj['size'] = size;
+    return obj;
+  }
+}
+
+class CountryArmySizeMessage extends CountryMessage {
+  final int army;
+  CountryArmySizeMessage.fromObject(obj) : super.fromObject(obj), army = obj['army'];
 }

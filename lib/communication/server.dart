@@ -85,6 +85,18 @@ class ServerConnection {
         case 'CountriesListMessage' :
           _messageController.add(new CountriesListMessage.fromObject(obj));
           break;
+        case 'AttackMoveMessage' :
+          _messageController.add(new AttackMoveMessage.fromObject(obj));
+          break;
+        case 'ChooseTroopSizeMessage' :
+          _messageController.add(new ChooseTroopSizeMessage.fromObject(obj));
+          break;
+        case 'CountryArmySizeMessage' :
+          _messageController.add(new CountryArmySizeMessage.fromObject(obj));
+          break;
+        case 'FortifyMoveMessage' :
+          _messageController.add(new FortifyMoveMessage.fromObject(obj));
+          break;
         default :
           _messageController.addError(obj);
           break;

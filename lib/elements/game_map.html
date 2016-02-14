@@ -5,13 +5,17 @@
                 display: block;
             }
 
-            svg {
-                width: 100%;
-                height: auto;
+            :host(.highlighed) .country:not(.highlight) path {
+                fill: #ccc !important;
             }
 
-            svg .country:hover path, svg .country.selected path {
-                fill: red !important;
+            svg, #container, :host {
+                width: 100%;
+                height: 100%;
+            }
+
+            svg .country:hover path { /* svg .country.selected path */
+                fill: white !important;
             }
 
             svg .country circle {
@@ -24,7 +28,7 @@
         </style>
         <template if="{{lobby}}">
             <style type="text/css">
-                #container circle {
+                circle {
                     display: none !important;
                 }
             </style>

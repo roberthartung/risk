@@ -12,7 +12,8 @@ import 'communication/messages.dart';
 
 enum MoveType {
   CONQUER,
-  REINFORCE
+  REINFORCE,
+  ATTACK
 }
 
 enum GameState {
@@ -38,11 +39,18 @@ class Game extends Observable {
   final StreamController<MoveType> _nextMoveController = new StreamController.broadcast();
   Stream<MoveType> get onNextMove => _nextMoveController.stream;
 
+  final StreamController<ChooseTroopSizeMessage> _chooseTroopSizeController = new StreamController.broadcast();
+  Stream<ChooseTroopSizeMessage> get onChooseTroopSize => _chooseTroopSizeController.stream;
+
+  final StreamController<FortifyMoveMessage> _fortifyController = new StreamController.broadcast();
+  Stream<FortifyMoveMessage> get onFortify => _fortifyController.stream;
+
   Queue<Message> _messageQueue = new Queue();
 
   //GameRenderer _renderer;
   //GameRenderer get renderer => _renderer;
   World _world;
+  World get world => _world;
   ServerConnection _server;
   ServerConnection get server => _server;
   @observable User leader;
@@ -62,19 +70,39 @@ class Game extends Observable {
   void setWorld(World world) {
     _world = world;
     print('Game: World loaded, ${_messageQueue.length}');
-    _messageQueue.forEach((Message m) {
-      if(m is CountriesListMessage) {
-        print('$m');
-        Country.countries.forEach((String id, Country country) {
-          if(country.user != null) {
-            country.conquer(country.user);
-          }
-        });
-      } else if(m is CountryConqueredMessage) {
-        m.country.conquer(m.user);
-      }
-    });
+    _messageQueue.forEach(handleMessage);
     _messageQueue.clear();
+  }
+
+  void handleMessage(Message m) {
+    if(m is CountriesListMessage) {
+      Country.countries.forEach((String id, Country country) {
+        if(country.user != null) {
+          country.conquer(country.user);
+        }
+      });
+    } else if(m is CountryConqueredMessage) {
+      m.country.conquer(m.user);
+    } else if(m is NextMoveMessage) {
+      if(m is ConquerMoveMessage) {
+        _nextMoveController.add(MoveType.CONQUER);
+      } else if(m is ReinforceMoveMessage) {
+        _nextMoveController.add(MoveType.REINFORCE);
+      } else if(m is AttackMoveMessage) {
+        _nextMoveController.add(MoveType.ATTACK);
+      }
+    } else if(m is CountryReinforcedMessage) {
+      m.country.reinforce();
+    } else if(m is LeaderChangedMessage) {
+      _leaderChangedController.add(new User(m.leader));
+    } else if(m is ChooseTroopSizeMessage) {
+      _chooseTroopSizeController.add(m);
+    } else if(m is CountryArmySizeMessage) {
+      m.country.armySize = m.army;
+      m.country.updateArmySize();
+    } else if(m is FortifyMoveMessage) {
+      _fortifyController.add(m);
+    }
   }
 
   void _setupServer() {
@@ -96,31 +124,12 @@ class Game extends Observable {
       } else if(m is GameStateChangedMessage) {
         state = m.state;
         _gameStateChangedController.add(m.state);
-      } else if(m is NextMoveMessage) {
-        if(m is ConquerMoveMessage) {
-          _nextMoveController.add(MoveType.CONQUER);
-        } else if(m is ReinforceMoveMessage) {
-          _nextMoveController.add(MoveType.REINFORCE);
-        }
-      } else if(m is CountryConqueredMessage) {
+      } else {
         if(_world == null) {
           _messageQueue.add(m);
         } else {
-          m.country.conquer(m.user);
+          handleMessage(m);
         }
-      } else if(m is CountryReinforcedMessage) {
-        //print(m);
-        m.country.reinforce();
-        //m.country.armySize++;
-      } else if(m is LeaderChangedMessage) {
-        _leaderChangedController.add(new User(m.leader));
-      } else if(m is CountriesListMessage) {
-        /// Fake conquer if we get the initial list and the country already has
-        /// an assigned user!
-        if(_world == null) {
-          _messageQueue.add(m);
-        }
-        // print(_world);
       }
     });
 

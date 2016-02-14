@@ -32,10 +32,14 @@ class PreparationPhase(Enum):
     REINFORCE = 1
 
 class GamePhase(Enum):
+    # A user can reinforce their existing countries, until their limit is reached
     REINFORCE = 0
+    # A user can attack until he decides to move to the next step
     ATTACK = 1
-    MOVE_ARMY = 2
-    DRAW_CARD = 3
+    # Fortify after attack
+    ATTACK_FORTIFY = 2
+    # Move army
+    FORTIFY = 3
 
 games = {}
 users = {}
@@ -194,7 +198,7 @@ class Game:
         self.preparation_phase = PreparationPhase.REINFORCE
         # force new iterator here!
         self.user_round_iterator = None
-        number_of_soldiers = 2 * len(self.world.countries) / len(self.users) # 5 #
+        number_of_soldiers = 2 # 2 * len(self.world.countries) / len(self.users) #
         print("Switching to REINFORCE phase, #" + str(number_of_soldiers))
         for user in self.users:
             self.addRemainingArmy(user, number_of_soldiers)
@@ -221,31 +225,24 @@ class Game:
         await self.roundStep()
 
     async def sendMoveMessage(self):
+        message = None
         if (self.state == GameState.preparation):
             if self.preparation_phase == PreparationPhase.CONQUER:
                 message = {'type':'ConquerMoveMessage'}
             else:
                 message = {'type':'ReinforceMoveMessage'}
-
-            for session in self.current_user.sessions:
-                await session.sendMessage(message)
         elif self.state == GameState.started:
-            # Check old state and determine next state!
-            if self.game_phase == None:
-                self.game_phase = GamePhase.REINFORCE
-                # TODO(rh): Can we use the same message here?
+            if self.game_phase == GamePhase.REINFORCE:
                 message = {'type':'ReinforceMoveMessage'}
-            elif self.game_phase == GamePhase.REINFORCE:
-                self.game_phase = GamePhase.ATTACK
-                pass
             elif self.game_phase == GamePhase.ATTACK:
-                self.game_phase = GamePhase.MOVE_ARMY
-            elif self.game_phase == GamePhase.MOVE_ARMY:
+                message = {'type':'AttackMoveMessage'}
+            elif self.game_phase == GamePhase.FORTIFY:
+                message = {'type':'FortifyMoveMessage', 'from': None, 'to': None, 'min': None, 'max': None}
+            elif self.game_phase == GamePhase.ATTACK_FORTIFY:
+                message = {'type':'FortifyMoveMessage', 'from': self.attack_from_country.id, 'to': self.attack_to_country.id, 'min': 0, 'max': self.attack_from_country.army - 1}
 
-            elif self.game_phase == GamePhase.DRAW_CARD:
-                # next user?
-                pass
-
+        for session in self.current_user.sessions:
+            await session.sendMessage(message)
 
     def determineNextUser(self):
         if (self.user_round_iterator == None):
@@ -259,16 +256,32 @@ class Game:
 
         return self.current_user
 
-    # Make the next roundstep!
+    # This method is called when a user has finished one step
+    # This can be called multiple times for the same type of move
     async def roundStep(self):
-        self.determineNextUser()
+        # Check if preparation has been finished!
+        if self.state == GameState.preparation:
+            # In preparation phase: we always determine the next user!
+            self.determineNextUser()
+            # if the next user has no more remaining troops, we're finished!
+            if (self.preparation_phase == PreparationPhase.REINFORCE) and (self.user_remaining[self.current_user] == 0):
+                print('Switch game state')
+                self.preparation_phase = None
+                # Make sure we get a new iterator
+                self.user_round_iterator = None
+                await self.changeState(GameState.started)
 
-        if (self.state == GameState.preparation) and (self.preparation_phase == PreparationPhase.REINFORCE) and (self.user_remaining[self.current_user] == 0):
-            print("Reinforcing DONE -> Chaning state to 'started'")
-            self.preparation_phase = None
-            self.user_round_iterator = None
-            self.game_phase = None
-            await self.changeState(GameState.started)
+        # no else here, because we might have changed state from before!
+        if self.state == GameState.started:
+            # Determine the next user, if there is no iterator!
+            if (self.user_round_iterator == None) or (self.game_phase == None):
+                self.game_phase = GamePhase.REINFORCE
+                self.determineNextUser()
+                self.user_remaining[self.current_user] += 1 # TODO(rh): Correct amount!
+
+            # if user has no more troops left -> change state to attack!
+            if (self.game_phase == GamePhase.REINFORCE) and (self.user_remaining[self.current_user] == 0):
+                self.game_phase = GamePhase.ATTACK
 
         print("roundStep: " + str(self.current_user))
         await self.sendMoveMessage()
@@ -311,6 +324,122 @@ class Game:
 
         await session.game.roundStep()
 
+    # Start to attack
+    async def attack(self, session, from_country_id, to_country_id):
+        if (not from_country_id in self.world.countries) or (not to_country_id in self.world.countries):
+            print("ERROR,attack: Country not found")
+            return None
+
+        self.attack_from_country = self.world.countries[from_country_id]
+        self.attack_to_country = self.world.countries[to_country_id]
+        # If attacking country is not from this user, or the country's users are
+        # the same
+        if (not self.attack_from_country.user == session.user) or (self.attack_from_country.user == self.attack_to_country.user):
+            print("ERROR,attack: Attack to wrong country!")
+            # TODO(rh): Resend move message here?
+            return None
+
+        self.attack_troop_size = None
+        self.defend_troop_size = None
+
+        for session in self.attack_from_country.user.sessions:
+            await session.sendMessage({'type':'ChooseTroopSizeMessage', 'max': (self.attack_from_country.army - 1), 'country': from_country_id, 'attacker': True})
+
+        # 1. Ask attacker to enter amount of troops
+        # 2. Ask defender to enter amount of troops
+        # 3. Roll the dice
+        print("Attacking country...")
+
+    # User chooses to advance to the next phase, e.g. after attacking countries
+    # In this case, move to fortify phase for this user!
+    async def nextPhase(self, session):
+        if self.game_phase == GamePhase.ATTACK:
+            self.game_phase = GamePhase.FORTIFY
+        elif self.game_phase == GamePhase.FORTIFY:
+            self.game_phase = None
+
+        await self.roundStep()
+
+    async def setTroopSize(self, session, size):
+        if self.attack_troop_size == None:
+            self.attack_troop_size = size
+            for session in self.attack_to_country.user.sessions:
+                await session.sendMessage({'type':'ChooseTroopSizeMessage', 'max': (self.attack_to_country.army - 1), 'country': self.attack_to_country.id, 'defender': True})
+        elif self.defend_troop_size == None:
+            self.defend_troop_size = size
+            attacker = []
+            defender = []
+
+            for i in range(0, self.attack_troop_size):
+                attacker.append(random.randint(1,6))
+
+            for i in range(0, self.defend_troop_size):
+                defender.append(random.randint(1,6))
+
+            print('DO ATTACK')
+
+            for a, d in zip(reversed(sorted(attacker)), reversed(sorted(defender))):
+                print(str(a) + " <-> " + str(d))
+                if d >= a:
+                    # defender wins -> attacker (from) loses
+                    self.attack_from_country.army -= 1
+                    print('Attacker loses 1')
+                else:
+                    # attacker wins -> defender (to) loses
+                    self.attack_to_country.army -= 1
+                    print('Defender loses 1')
+
+            print('Remaining: ' + str(self.attack_from_country.army) + ' <-> ' + str(self.attack_to_country.army))
+
+            if self.attack_to_country.army == 0:
+                print('Country conquered')
+                # decrease army on attacker country by attacking troop size
+                self.attack_from_country.army -= self.attack_troop_size
+                # update target country
+                self.attack_to_country.army = self.attack_troop_size
+                self.attack_to_country.user = self.attack_from_country.user
+                # send conquered message
+                await self.sendMessage({'type':'CountryConqueredMessage', 'country': self.attack_to_country.id, 'user': {'name':self.attack_from_country.user.name}})
+                # If at least 2 troops are left -> Enable fortify. In all other
+                # cases, no fortify her!
+                if self.attack_from_country.army > 1:
+                    print('Enable ATTACK_FORTIFY')
+                    self.game_phase = GamePhase.ATTACK_FORTIFY
+
+            await self.sendMessage({'type': 'CountryArmySizeMessage', 'country': self.attack_from_country.id, 'army': self.attack_from_country.army})
+            await self.sendMessage({'type': 'CountryArmySizeMessage', 'country': self.attack_to_country.id, 'army': self.attack_to_country.army})
+            await self.sendMoveMessage()
+        else:
+            print("Unable to accept troop size?")
+
+    async def fortify(self, session, from_country_id, to_country_id, size):
+        # Check if both countries are valid!
+        if (not from_country_id in self.world.countries) or (not to_country_id in self.world.countries):
+            print("ERROR,fortify: Country/Countries not found")
+            return None
+
+        from_country = self.world.countries[from_country_id]
+        to_country = self.world.countries[to_country_id]
+
+        # Check if same user for both countries!
+        if (not session.user == from_country.user) or (not session.user == to_country.user):
+            print("ERROR,fortify: Invalid country combination")
+            return None
+
+        # Check if amount after fortify is at least 1
+        if (from_country.army - size < 1):
+            print("ERROR,fortify: Size too large!")
+            return None
+
+        # Do it
+        from_country.army -= size
+        to_country.army += size
+        await self.sendMessage({'type': 'CountryArmySizeMessage', 'country': from_country.id, 'army': from_country.army})
+        await self.sendMessage({'type': 'CountryArmySizeMessage', 'country': to_country.id, 'army': to_country.army})
+
+        self.game_phase = GamePhase.ATTACK
+        await self.sendMoveMessage()
+
     def addRemainingArmy(self, user, amount):
         if user in self.user_remaining:
             self.user_remaining[user] += amount
@@ -348,9 +477,9 @@ async def handler(websocket, path):
                     user = User(user_name, user_pass)
                     users[user_name] = user
 
-                if (user.pw == user_pass):
+                if user.pw == user_pass:
                     # create game if necessary
-                    if(game_name in games):
+                    if game_name in games:
                         game = games[game_name]
                     else:
                         game = Game(game_name)
@@ -363,18 +492,30 @@ async def handler(websocket, path):
                         print("Session created " + str(session))
                     else:
                         print("Unable to add user to game!")
-            elif (frame_type == 'StartGameMessage'):
-                if(session != None):
+            elif frame_type == 'StartGameMessage':
+                if session != None:
                     await session.game.start(obj['random'])
             #elif (frame_type == 'MoveFinishedMessage'):
             #    if(session != None):
             #        await session.game.roundStep()
-            elif (frame_type == 'ConquerMoveFinishedMessage'):
-                if (session != None):
+            elif frame_type == 'NextPhaseMessage':
+                if session != None:
+                    await session.game.nextPhase(session)
+            elif frame_type == 'ConquerMoveFinishedMessage':
+                if session != None:
                     await session.game.conquerCountry(session, obj['country'])
-            elif (frame_type == 'ReinforceMoveFinishedMessage'):
-                if (session != None):
+            elif frame_type == 'ReinforceMoveFinishedMessage':
+                if session != None:
                     await session.game.reinforceCountry(session, obj['country'])
+            elif frame_type == 'AttackMessage':
+                if session != None:
+                    await session.game.attack(session, obj['from'], obj['to'])
+            elif frame_type == 'TroopSizeMessage':
+                if session != None:
+                    await session.game.setTroopSize(session, obj['size'])
+            elif frame_type == 'FortifyMessage':
+                if session != None:
+                    await session.game.fortify(session, obj['from'], obj['to'], obj['size'])
             else:
                 print("Unknown message received: " + str(obj))
         except websockets.exceptions.ConnectionClosed:

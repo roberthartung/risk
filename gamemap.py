@@ -33,6 +33,7 @@ class Country:
 
     def conquer(self, user):
         self.user = user
+        self.army = 1
 
     def reinforce(self):
         self.army += 1

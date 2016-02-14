@@ -23,9 +23,30 @@
                 width: 15px;
                 height: 15px;
             }
+
+            #map-container {
+                position: absolute;
+                top: 20px;
+                left: 20px;
+                right: 20px;
+                bottom: 80px;
+            }
+
+            #game-controls {
+                position: absolute;
+                left: 20px;
+                right: 20px;
+                bottom: 0px;
+                height: 60px;
+                background-color: gray;
+            }
         </style>
         <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
         <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css" integrity="sha384-fLW2N01lMqjakBkx3l/M9EahuwpSfeNvV63J5ezn3uZzapT0u7EYsXMjQV+0En5r" crossorigin="anonymous">
+        <audio id="sound-click">
+            <source src="http://rcptones.com/dev_tones/tones/click_04.wav">
+            <!--/risk/web/sounds/click_04.wav-->
+        </audio>
         <div id="login">
             <div>
                 <form id="login-form" method="POST" action="#">
@@ -59,7 +80,21 @@
             </div>
         </div>
         <div id="game" hidden="true">
-            <button id="game-move-finish" class="btn btn-primary" disabled="disabled">Finish move</button>
+            <!--<button id="game-move-finish" class="btn btn-primary" disabled="disabled">Finish move</button>-->
+            <div id="map-container"></div>
+            <div id="game-controls">
+                <span id="move-description"></span>
+                <button class="btn btn-primary" id="btn-next-phase">Next Phase</button>
+                <img src="packages/risk/asset/dice_1.svg" id="control-dice-1" alt="dice" height="40" hidden="true">
+                <img src="packages/risk/asset/dice_2.svg" id="control-dice-2" alt="dice" height="40" hidden="true">
+                <img src="packages/risk/asset/dice_3.svg" id="control-dice-3" alt="dice" height="40" hidden="true">
+                <input type="range" id="control-range" min="1" max="2" size="10" hidden="true" style="display: inline-block; width: 150px;"> <span hidden="true" id="control-range-text"></span>
+                <!--
+                <img src="packages/risk/asset/dice_4.svg" id="control-dice-4" alt="dice" height="40">
+                <img src="packages/risk/asset/dice_5.svg" id="control-dice-5" alt="dice" height="40">
+                <img src="packages/risk/asset/dice_6.svg" id="control-dice-6" alt="dice" height="40">
+                -->
+            </div>
         </div>
     </template>
     <script type="application/dart" src="game_ui.dart"></script>
