@@ -6,7 +6,9 @@
             }
 
             :host(.highlighed) .country:not(.highlight) path {
-                fill: #ccc !important;
+                /*fill: #ccc !important;*/
+                /*opacity: .25;*/
+                filter: url(#brightness);
             }
 
             svg, #container, :host {

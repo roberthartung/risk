@@ -13,6 +13,8 @@ abstract class InputDevice {
   Stream<Country> get onCountryMouseOver;
   Stream<Country> get onCountryMouseOut;
   Country get selectedCountry;
+  /// TODO(rh): Remove
+  Point get pos;
   //Stream<Country> get onCountryDoubleClicked;
 
   void attach(Element container);
@@ -54,8 +56,11 @@ class MouseInputDevice extends InputDevice {
     return null;
   }
 
+  Point pos;
+
   void attach(Element container) {
     container.onClick.listen((MouseEvent ev) {
+      pos = ev.offset;
       ev.preventDefault();
       Country country = getCountryFromEvent(ev);
       if(country != null) {

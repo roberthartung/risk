@@ -74,8 +74,15 @@
            id="feMergeNode4157" />
       </feMerge>
     </filter>
-    <marker id="markerArrow" markerWidth="13" markerHeight="13" refX="2" refY="6" orient="auto">
-      <path d="M2,2 L2,11 L10,6 L2,2" style="fill: #000000;" />
+    <filter id="brightness">
+            <feComponentTransfer>
+                <feFuncR type="linear" slope="2"></feFuncR>
+                <feFuncG type="linear" slope="2"></feFuncG>
+                <feFuncB type="linear" slope="2"></feFuncB>
+            </feComponentTransfer>
+          </filter>
+    <marker id="markerArrow" markerWidth="6.5" markerHeight="6.5" refX="2.5" refY="3" orient="auto">
+      <path d="M1,1 L1,5.5 L5.5,3 L1,1" style="fill: #000000;" />
     </marker>
   </defs>
   <sodipodi:namedview

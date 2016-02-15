@@ -1,8 +1,11 @@
 library game.ui;
 
-import 'dart:html';
-import 'dart:async';
+import 'dart:html' hide Point;
+import 'dart:async' hide Point;
+import 'dart:svg' show PathElement, GraphicsElement, CircleElement, Rect, Matrix, GeometryElement, Point;
+import 'dart:math' hide Point;
 
+import 'package:vector_math/vector_math.dart';
 import 'package:polymer/polymer.dart';
 import 'package:risk/game.dart';
 import 'game_map.dart';
@@ -170,6 +173,44 @@ class GameUi extends PolymerElement {
       }
     });
 
+    /*
+    Country start = null;
+    //Point startPos = null;
+    _inputDevice.onCountrySelected.listen((Country country) {
+      if(start == null) {
+        start = country;
+      } else if(start != country) {
+
+        Vector2 getPos(GraphicsElement e) {
+          e.attributes['fill'] = 'red';
+          Point p = game.world.root.createSvgPoint();
+          Rect bbox = e.getBBox();
+          p.x = bbox.x + bbox.width/2;
+          p.y = bbox.y + bbox.height/2;
+          Matrix m = e.getTransformToElement(game.world.root);
+          var sp = p.matrixTransform(m);
+          Vector2 pos = new Vector2(sp.x, sp.y);
+
+          return pos;
+        }
+
+        Vector2 begin = getPos(start.element.querySelector('circle'));
+        Vector2 end = getPos(country.element.querySelector('circle')); // #${country.element.id}-0
+
+        PathElement path = game.world.root.querySelector('#attackindicator');
+        Vector2 dir = end - begin;
+        Vector2 middle = begin + dir.scaled(0.5);
+        num t = radians(-90.0);
+        Vector2 norm = new Vector2(dir.x * cos(t) - dir.y * sin(t), dir.x * sin(t) + dir.y * cos(t));
+        norm.normalize();
+        Vector2 through = middle + norm * 50.0; // dir.length
+        path.attributes['d'] = 'M${begin.x},${begin.y} Q${through.x},${through.y} ${end.x},${end.y}';
+
+        start = null;
+      }
+    });
+    */
+
     ButtonElement nextPhaseButton = $['btn-next-phase'];
     nextPhaseButton.onClick.listen((MouseEvent ev) {
       ev.preventDefault();
@@ -177,9 +218,7 @@ class GameUi extends PolymerElement {
       finishMove();
       // nextPhaseButton.disabled = true;
     });
-
     // map.classes.add('highlighed');
-
     //ButtonElement finishMoveButton = $['game-move-finish'];
     game.onNextMove.listen((MoveType move) {
       /// Initialle: Button is disabled

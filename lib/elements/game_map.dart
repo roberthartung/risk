@@ -25,7 +25,6 @@ class GameMap extends PolymerElement {
   void _worldLoaded(World world) {
     print('World loaded');
     this.world = world;
-    // _inputDevice = new MouseInputDevice($['container']);
     _onWorldLoadedController.add(world);
   }
 

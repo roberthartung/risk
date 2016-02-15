@@ -11,8 +11,9 @@ class World {
   final List<Connector> connectors = new List();
   final Rectangle dimension;
   final Map<Country,List<Country>> connectedCountries = new Map();
+  final SvgSvgElement root;
 
-  World(this.dimension);
+  World(this.dimension, this.root);
 
   void calculateConnectedCountries() {
     connectedCountries.clear();
@@ -201,11 +202,17 @@ Future loadWorld(Element container, String fileName) {
     var viewBox = root.getAttribute('viewBox').split(' ');
     Rectangle dimension = new Rectangle<double>(double.parse(viewBox[0]), double.parse(viewBox[1]), double.parse(viewBox[2]), double.parse(viewBox[3]));
     /// Create world, countries, ...
-    World world = new World(dimension);
+    World world = new World(dimension, root);
     loadCountries(world, root.querySelector('#countries'));
     loadConnectors(world, root.querySelector('#connectors'));
     /// Pre-calculate the connected countries (Map country -> list of countries)
     world.calculateConnectedCountries();
+    PathElement attackPath = new PathElement();
+    attackPath.attributes['style'] = 'stroke:black; stroke-width: 4px; stroke-dasharray: 5 5; marker-end: url(#markerArrow); fill: none;';
+    attackPath.id = 'attackindicator';
+    attackPath.hidden = true;
+    // <path d="M10,10 Q90,30 110,110"/>
+    world.root.append(attackPath);
     return world;
   });
 }

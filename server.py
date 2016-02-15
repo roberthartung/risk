@@ -198,7 +198,7 @@ class Game:
         self.preparation_phase = PreparationPhase.REINFORCE
         # force new iterator here!
         self.user_round_iterator = None
-        number_of_soldiers = 2 # 2 * len(self.world.countries) / len(self.users) #
+        number_of_soldiers = 2 * len(self.world.countries) / len(self.users) # 2 TODO(rh): Correct?
         print("Switching to REINFORCE phase, #" + str(number_of_soldiers))
         for user in self.users:
             self.addRemainingArmy(user, number_of_soldiers)
@@ -277,7 +277,7 @@ class Game:
             if (self.user_round_iterator == None) or (self.game_phase == None):
                 self.game_phase = GamePhase.REINFORCE
                 self.determineNextUser()
-                self.user_remaining[self.current_user] += 1 # TODO(rh): Correct amount!
+                self.user_remaining[self.current_user] += 5 # TODO(rh): Correct amount!
 
             # if user has no more troops left -> change state to attack!
             if (self.game_phase == GamePhase.REINFORCE) and (self.user_remaining[self.current_user] == 0):
